@@ -63,6 +63,12 @@ export function PatientChatSheet({ patient, onClose, selfRole = "护士" }: { pa
           </div>
         </div>
         <button
+          onClick={() => alert(`正在拨打 ${patient.phone}`)}
+          className="flex items-center gap-1 rounded-full bg-success/15 px-2 py-1 text-[10px] font-medium text-success"
+        >
+          <Phone className="h-3 w-3" />电话
+        </button>
+        <button
           onClick={() => setArchiveOpen(true)}
           className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary"
         >
