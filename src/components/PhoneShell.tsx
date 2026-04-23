@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Signal, Wifi, BatteryFull } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,8 +23,16 @@ export function PhoneShell({
   bottom?: ReactNode;
   className?: string;
 }) {
-  const now = new Date();
-  const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const [time, setTime] = useState("09:41");
+  useEffect(() => {
+    const update = () => {
+      const n = new Date();
+      setTime(`${String(n.getHours()).padStart(2, "0")}:${String(n.getMinutes()).padStart(2, "0")}`);
+    };
+    update();
+    const id = setInterval(update, 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <div
