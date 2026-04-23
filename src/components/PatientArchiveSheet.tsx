@@ -1,4 +1,4 @@
-import { X, FileHeart, Pill, History, AlertTriangle } from "lucide-react";
+import { X, FileHeart, Pill, History, AlertTriangle, Activity, ShieldAlert, Stethoscope } from "lucide-react";
 import type { Patient } from "@/lib/types";
 import { getArchive } from "@/lib/mock-records";
 
@@ -27,7 +27,7 @@ export function PatientArchiveSheet({ patient, onClose }: { patient: Patient; on
             <Field label="主诊断" value={patient.diagnosis} />
             <Field label="拟行术式" value={patient.surgeryName ?? "—"} />
             <Field label="主任" value={patient.director} />
-            <Field label="责任医生" value={patient.responsibleDoctor ?? "—"} />
+            <Field label="责任治疗师" value={patient.responsibleTherapist ?? "—"} />
           </div>
         </div>
 
@@ -43,6 +43,59 @@ export function PatientArchiveSheet({ patient, onClose }: { patient: Patient; on
             <div key={h}>· {h}</div>
           ))}
         </div>
+
+        {/* 术前康复评估 */}
+        <SectionTitle icon={Activity} text="术前康复评估" tone="text-info" />
+        <div className="rounded-xl border bg-info/5 p-3 text-[11px]">
+          <div className="mb-1.5 flex items-center justify-between text-[10px] text-muted-foreground">
+            <span>评估日期：{arc.preRehab.date}</span>
+            <span>评估师：朱年鑫</span>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <Field label="关节活动度 ROM" value={arc.preRehab.rom} />
+            <Field label="肌力" value={arc.preRehab.strength} />
+            <Field label="疼痛" value={arc.preRehab.pain} />
+            <Field label="功能评分" value={arc.preRehab.function} />
+          </div>
+          <div className="mt-2 rounded-lg bg-card p-2 text-[11px]">
+            <div className="mb-0.5 text-[9px] font-bold text-info">康复师建议</div>
+            {arc.preRehab.note}
+          </div>
+        </div>
+
+        {/* 康复注意事项 */}
+        <SectionTitle icon={ShieldAlert} text="康复注意事项" tone="text-warning-foreground" />
+        <div className="rounded-xl border bg-warning/5 p-2.5 text-[11px]">
+          {arc.precautions.map((p, i) => (
+            <div key={i} className="flex gap-1.5 py-0.5">
+              <span className="text-warning-foreground">{i + 1}.</span>
+              <span>{p}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* 手术评估（医生建议） */}
+        {arc.surgery && (
+          <>
+            <SectionTitle icon={Stethoscope} text="手术评估 · 医生建议" tone="text-primary" />
+            <div className="rounded-xl border bg-primary/5 p-3 text-[11px]">
+              <div className="mb-1.5 flex items-center justify-between text-[10px] text-muted-foreground">
+                <span>手术日期：{arc.surgery.date}</span>
+                <span>主刀：{patient.director}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <Field label="麻醉方式" value={arc.surgery.anesthesia} />
+                <Field label="术中出血" value={arc.surgery.bleeding} />
+                <Field label="手术时长" value={arc.surgery.duration} />
+                <Field label="并发症" value={arc.surgery.complications} />
+              </div>
+              <div className="mt-2 rounded-lg bg-card p-2 text-[11px]">
+                <div className="mb-0.5 text-[9px] font-bold text-primary">医生建议（推送至治疗师）</div>
+                {arc.surgery.doctorAdvice}
+              </div>
+            </div>
+          </>
+        )}
 
         {/* 护理记录 */}
         <SectionTitle icon={FileHeart} text="护理记录" />
