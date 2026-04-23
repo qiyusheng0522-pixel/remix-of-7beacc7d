@@ -135,11 +135,10 @@ function RolePage() {
             >
               <ChevronLeft className="h-3 w-3" />
               查看全部 4 个角色端
-            </Link>
           </div>
-        </main>
         </aside>
       </div>
     </div>
   );
 }
+
