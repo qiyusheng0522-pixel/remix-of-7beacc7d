@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Activity,
   ClipboardCheck,
   CheckCircle2,
   TrendingUp,
@@ -535,6 +534,3 @@ function PlanStatusBadge({ status }: { status: PlanStatus }) {
   );
 }
 
-// keep imports referenced
-const _activity = Activity;
-void _activity;
