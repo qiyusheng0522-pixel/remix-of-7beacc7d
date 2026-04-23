@@ -20,6 +20,7 @@ import { Card, MiniStat, QuickAction } from "./SecretaryWorkbench";
 import { BarChart, ChartCard, HBarRow, LineChart, StatTile } from "@/components/WorkStats";
 import { PatientChatSheet } from "@/components/PatientChatSheet";
 import { PatientArchiveSheet } from "@/components/PatientArchiveSheet";
+import { RehabRecordSheet } from "@/components/RehabRecordSheet";
 import { ActionSheet, ToastBanner } from "@/components/ActionSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
@@ -48,6 +49,7 @@ export function TherapistWorkbench() {
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [actionPatient, setActionPatient] = useState<Patient | null>(null);
   const [planEditor, setPlanEditor] = useState<Patient | null>(null);
+  const [recordFor, setRecordFor] = useState<Patient | null>(null);
   const [planStatuses, setPlanStatuses] = useState<Record<string, PlanStatus>>({
     p7: "ai-draft",
     p8: "confirmed",
@@ -55,7 +57,12 @@ export function TherapistWorkbench() {
   });
   const [toast, setToast] = useState<string | null>(null);
 
-  const myPatients = patients.filter((p) => ["in-surgery", "post-op", "rehab"].includes(p.status));
+  // 住院 + 门诊康复患者
+  const inpatientList = patients.filter(
+    (p) => p.department === "inpatient" && ["in-surgery", "post-op", "rehab"].includes(p.status),
+  );
+  const outpatientList = patients.filter((p) => p.department === "outpatient" && p.status === "rehab");
+  const myPatients = [...inpatientList, ...outpatientList];
   const tasks = todayTasks.therapist;
 
   const showToast = (t: string) => {
@@ -107,9 +114,11 @@ export function TherapistWorkbench() {
       )}
       {tab === "records" && (
         <RecordsTab
-          list={myPatients}
+          inpatientList={inpatientList}
+          outpatientList={outpatientList}
           onSelect={(p) => setActionPatient(p)}
           onAssess={(p) => showToast(`正在为 ${p.name} 进行康复评估...`)}
+          onAddRecord={(p) => setRecordFor(p)}
           onDischarge={(p) => showToast(`已发起康复出院评估：${p.name}`)}
         />
       )}
@@ -126,6 +135,16 @@ export function TherapistWorkbench() {
           }}
         />
       )}
+      {recordFor && (
+        <RehabRecordSheet
+          patient={recordFor}
+          onClose={() => setRecordFor(null)}
+          onSave={() => {
+            showToast(`已保存院内康复记录：${recordFor.name}`);
+            setRecordFor(null);
+          }}
+        />
+      )}
       {overlay?.kind === "chat" && (
         <PatientChatSheet patient={overlay.patient} onClose={() => setOverlay(null)} selfRole="治" />
       )}
@@ -134,12 +153,20 @@ export function TherapistWorkbench() {
       )}
       <ActionSheet
         open={!!actionPatient}
-        title={actionPatient ? `${actionPatient.name} · ${actionPatient.bedNo}床` : ""}
+        title={actionPatient ? `${actionPatient.name}${actionPatient.bedNo ? ` · ${actionPatient.bedNo}床` : " · 门诊"}` : ""}
         onClose={() => setActionPatient(null)}
         actions={[
           { label: "在线沟通", tone: "primary", onClick: () => actionPatient && setOverlay({ kind: "chat", patient: actionPatient }) },
           { label: "查看患者档案", onClick: () => actionPatient && setOverlay({ kind: "archive", patient: actionPatient }) },
-          { label: "新增院内治疗记录", onClick: () => showToast("打开记录单") },
+          {
+            label: "新增院内治疗记录",
+            onClick: () => {
+              if (actionPatient) {
+                setRecordFor(actionPatient);
+                setActionPatient(null);
+              }
+            },
+          },
           { label: "发起康复评估", onClick: () => showToast("已发起评估") },
         ]}
       />
@@ -353,35 +380,74 @@ function PlansTab({
 }
 
 function RecordsTab({
-  list,
+  inpatientList,
+  outpatientList,
   onSelect,
   onAssess,
+  onAddRecord,
   onDischarge,
 }: {
-  list: typeof patients;
+  inpatientList: Patient[];
+  outpatientList: Patient[];
   onSelect: (p: Patient) => void;
   onAssess: (p: Patient) => void;
+  onAddRecord: (p: Patient) => void;
   onDischarge: (p: Patient) => void;
 }) {
+  const [sub, setSub] = useState<"inpatient" | "outpatient">("inpatient");
+  const list = sub === "inpatient" ? inpatientList : outpatientList;
+
   return (
     <div className="space-y-3 p-3">
+      {/* 子分段：住院 / 门诊 */}
+      <div className="grid grid-cols-2 overflow-hidden rounded-full border bg-muted/30 p-0.5 text-[12px]">
+        <button
+          onClick={() => setSub("inpatient")}
+          className={cn(
+            "rounded-full py-1.5 font-medium transition-colors",
+            sub === "inpatient" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
+          )}
+        >
+          住院 · {inpatientList.length}
+        </button>
+        <button
+          onClick={() => setSub("outpatient")}
+          className={cn(
+            "rounded-full py-1.5 font-medium transition-colors",
+            sub === "outpatient" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
+          )}
+        >
+          门诊 · {outpatientList.length}
+        </button>
+      </div>
+
+      {list.length === 0 && (
+        <div className="rounded-2xl border bg-card p-6 text-center text-[12px] text-muted-foreground">
+          暂无{sub === "inpatient" ? "住院" : "门诊"}康复患者
+        </div>
+      )}
+
       {list.map((p) => (
         <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
           <button onClick={() => onSelect(p)} className="block w-full border-b p-3 text-left">
             <div className="flex items-center gap-1.5">
-              {p.bedNo && (
+              {p.bedNo ? (
                 <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
                   {p.bedNo}床
                 </span>
+              ) : (
+                <span className="rounded-md bg-info/10 px-1.5 py-0.5 text-[10px] font-bold text-info">门诊</span>
               )}
               <span className="text-sm font-bold">{p.name}</span>
               <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
-              {p.status === "rehab" && <Pill cls="bg-success/15 text-success">康复达标</Pill>}
+              {p.status === "rehab" && p.department === "inpatient" && <Pill cls="bg-success/15 text-success">康复达标</Pill>}
               {p.status === "post-op" && <Pill cls="bg-info/15 text-info">术后第 3 日</Pill>}
               {p.status === "in-surgery" && <Pill cls="bg-warning/20 text-warning-foreground">今日术后</Pill>}
+              {p.status === "rehab" && p.department === "outpatient" && <Pill cls="bg-info/15 text-info">门诊康复</Pill>}
             </div>
             <div className="mt-1 text-[10px] text-muted-foreground">
-              {p.surgeryName} · 术日 {p.surgeryDate}
+              {p.surgeryName ?? p.diagnosis}
+              {p.surgeryDate && ` · 术日 ${p.surgeryDate}`}
             </div>
           </button>
 
@@ -400,7 +466,7 @@ function RecordsTab({
               <ClipboardCheck className="h-3 w-3" />康复评估
             </button>
             <button
-              onClick={() => onSelect(p)}
+              onClick={() => onAddRecord(p)}
               className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] text-foreground active:bg-muted/40"
             >
               <PlusCircle className="h-3 w-3" />新增记录

@@ -1,4 +1,4 @@
-// 患者历史档案（护理 / 用药 / 就诊）模拟数据
+// 患者历史档案（护理 / 用药 / 就诊 / 评估）模拟数据
 export interface NursingRecord {
   date: string;
   shift: "白班" | "夜班";
@@ -17,32 +17,75 @@ export interface VisitRecord {
   diagnosis: string;
   doctor: string;
 }
+export interface PreRehabAssessment {
+  date: string;
+  rom: string; // 关节活动度
+  strength: string; // 肌力
+  pain: string; // 疼痛 VAS
+  function: string; // 功能评分
+  note: string;
+}
+export interface SurgeryAssessment {
+  date: string;
+  anesthesia: string;
+  bleeding: string;
+  duration: string;
+  complications: string;
+  doctorAdvice: string; // 医生建议（推送给治疗师）
+}
 export interface PatientArchive {
   nursing: NursingRecord[];
   medication: MedicationRecord[];
   visits: VisitRecord[];
   allergies: string[];
   history: string[];
+  preRehab: PreRehabAssessment;
+  precautions: string[];
+  surgery?: SurgeryAssessment;
 }
 
 const defaultArchive: PatientArchive = {
   allergies: ["青霉素 (皮试阳性)"],
-  history: ["高血压 8 年，规律服药", "2018 年阑尾切除术"],
+  history: ["既往运动损伤史 2 次（同侧膝扭伤）", "无慢性病，无手术史"],
   nursing: [
-    { date: "04-22 06:00", shift: "夜班", vitals: "T 36.7 / P 78 / BP 132/80", note: "夜间睡眠可，无诉不适" },
-    { date: "04-21 20:00", shift: "白班", vitals: "T 36.5 / P 82 / BP 138/85", note: "晚餐进食 8 成，疼痛 VAS 3" },
-    { date: "04-21 08:00", shift: "白班", vitals: "T 36.6 / P 76 / BP 130/78", note: "完成术前宣教，皮试阴性" },
+    { date: "04-22 06:00", shift: "夜班", vitals: "T 36.7 / P 78 / BP 122/76", note: "夜间睡眠可，患肢冰敷" },
+    { date: "04-21 20:00", shift: "白班", vitals: "T 36.5 / P 82 / BP 118/72", note: "晚间疼痛 VAS 3，可耐受" },
+    { date: "04-21 08:00", shift: "白班", vitals: "T 36.6 / P 76 / BP 120/74", note: "完成术前康复宣教，皮试阴性" },
   ],
   medication: [
-    { date: "04-22", drug: "氨氯地平", dose: "5mg", route: "口服 qd" },
+    { date: "04-22", drug: "塞来昔布", dose: "200mg", route: "口服 bid" },
     { date: "04-21", drug: "头孢呋辛", dose: "1.5g", route: "静滴 q12h" },
     { date: "04-21", drug: "依诺肝素", dose: "4000IU", route: "皮下 qd" },
   ],
   visits: [
-    { date: "2024-04-12", type: "门诊", diagnosis: "右膝骨关节炎", doctor: "王主任" },
-    { date: "2024-04-19", type: "住院", diagnosis: "拟行右 TKA", doctor: "朱医生" },
-    { date: "2023-11-08", type: "门诊", diagnosis: "膝痛复诊", doctor: "王主任" },
+    { date: "2024-04-12", type: "门诊", diagnosis: "运动损伤评估 · ACL 重建术前", doctor: "王主任" },
+    { date: "2024-04-19", type: "住院", diagnosis: "拟行 ACL 重建术", doctor: "朱医生" },
+    { date: "2023-09-08", type: "门诊", diagnosis: "膝扭伤复诊", doctor: "王主任" },
   ],
+  preRehab: {
+    date: "2024-04-21",
+    rom: "屈膝 0-95° / 伸膝 0°",
+    strength: "股四头肌 4/5 · 腘绳肌 4/5",
+    pain: "VAS 4/10（活动时）",
+    function: "IKDC 58 / Lysholm 62",
+    note: "建议术前继续 SLR 训练，加强股四头肌力量；术前禁止剧烈跳跃运动。",
+  },
+  precautions: [
+    "术后 2 周内患肢严格不负重，使用支具固定于伸直位",
+    "冰敷每次 20 分钟，每日 4-6 次，持续 3 天",
+    "术后 24 小时开始踝泵 + 股四头肌等长收缩",
+    "禁止主动屈膝训练（需治疗师指导下被动屈膝）",
+    "如出现 38℃ 以上发热、伤口渗液立即就诊",
+  ],
+  surgery: {
+    date: "2024-04-23",
+    anesthesia: "全麻 + 股神经阻滞",
+    bleeding: "约 50 ml",
+    duration: "78 min",
+    complications: "无",
+    doctorAdvice:
+      "术中重建张力良好，建议术后第 1 日开始 CPM 0-30°，每周递增 15°；术后 2 周内严格佩戴支具；4 周后开始部分负重；6 周内禁止旋转扭转动作。",
+  },
 };
 
 export function getArchive(_id: string): PatientArchive {

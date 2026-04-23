@@ -162,20 +162,6 @@ function HomeTab({
         </div>
       </Card>
 
-      <Card title="本周战绩">
-        <div className="grid grid-cols-3 gap-1 p-3 text-center">
-          {[
-            { l: "已完成", v: 9 },
-            { l: "成功率", v: "100%" },
-            { l: "平均时长", v: "82min" },
-          ].map((x) => (
-            <div key={x.l}>
-              <div className="text-base font-bold text-primary">{x.v}</div>
-              <div className="text-[10px] text-muted-foreground">{x.l}</div>
-            </div>
-          ))}
-        </div>
-      </Card>
     </div>
   );
 }
