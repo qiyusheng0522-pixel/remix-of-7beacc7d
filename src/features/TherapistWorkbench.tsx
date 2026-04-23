@@ -49,6 +49,7 @@ export function TherapistWorkbench() {
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [actionPatient, setActionPatient] = useState<Patient | null>(null);
   const [planEditor, setPlanEditor] = useState<Patient | null>(null);
+  const [recordFor, setRecordFor] = useState<Patient | null>(null);
   const [planStatuses, setPlanStatuses] = useState<Record<string, PlanStatus>>({
     p7: "ai-draft",
     p8: "confirmed",
@@ -56,7 +57,12 @@ export function TherapistWorkbench() {
   });
   const [toast, setToast] = useState<string | null>(null);
 
-  const myPatients = patients.filter((p) => ["in-surgery", "post-op", "rehab"].includes(p.status));
+  // 住院 + 门诊康复患者
+  const inpatientList = patients.filter(
+    (p) => p.department === "inpatient" && ["in-surgery", "post-op", "rehab"].includes(p.status),
+  );
+  const outpatientList = patients.filter((p) => p.department === "outpatient" && p.status === "rehab");
+  const myPatients = [...inpatientList, ...outpatientList];
   const tasks = todayTasks.therapist;
 
   const showToast = (t: string) => {
