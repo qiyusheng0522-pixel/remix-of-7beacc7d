@@ -1,231 +1,394 @@
 import { useState } from "react";
-import { Phone, BellRing, BedDouble, ClipboardList, FileText, Building2, Hospital, AlertCircle, CheckCircle2, Clock, Camera } from "lucide-react";
-import { StatCard } from "@/components/StatCard";
-import { SectionCard } from "@/components/SectionCard";
+import {
+  Phone,
+  BellRing,
+  BedDouble,
+  Hospital,
+  Camera,
+  Clock,
+  Search,
+  Bell,
+  ChevronRight,
+  CheckCircle2,
+  AlertCircle,
+  Home,
+  ClipboardList,
+  User,
+} from "lucide-react";
+import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { patients, todayTasks } from "@/lib/mock-data";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
-export function SecretaryWorkbench() {
-  const [tab, setTab] = useState<"outpatient" | "inpatient">("outpatient");
+type TabKey = "home" | "outpatient" | "inpatient" | "me";
 
+export function SecretaryWorkbench() {
+  const [tab, setTab] = useState<TabKey>("home");
   const pendingAdmission = patients.filter((p) => p.status === "outpatient-pending");
   const inpatientPatients = patients.filter((p) => p.department === "inpatient");
   const tasks = todayTasks.secretary;
 
   return (
-    <div className="space-y-6">
-      {/* Hero */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="text-[11px] font-medium uppercase tracking-wider text-primary">Nurse · Secretary</div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight">护士 / 科室秘书 工作台</h1>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {new Date().toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric", weekday: "long" })} · 张护士长
-          </p>
+    <PhoneShell
+      title="护士工作台"
+      subtitle="张护士长 · 骨科病区"
+      bottom={
+        <TabBar
+          activeKey={tab}
+          onChange={(k) => setTab(k as TabKey)}
+          items={[
+            { key: "home", label: "首页", icon: Home, badge: tasks.length },
+            { key: "outpatient", label: "门诊", icon: Hospital, badge: pendingAdmission.length },
+            { key: "inpatient", label: "住院", icon: BedDouble },
+            { key: "me", label: "我的", icon: User },
+          ]}
+        />
+      }
+    >
+      {tab === "home" && <HomeTab tasks={tasks} pendingCount={pendingAdmission.length} inpatientCount={inpatientPatients.length} />}
+      {tab === "outpatient" && <OutpatientTab list={pendingAdmission} />}
+      {tab === "inpatient" && <InpatientTab list={inpatientPatients} />}
+      {tab === "me" && <MeTab name="张护士长" role="科室秘书 / 责任护士" />}
+    </PhoneShell>
+  );
+}
+
+/* ---------- Tabs ---------- */
+
+function HomeTab({
+  tasks,
+  pendingCount,
+  inpatientCount,
+}: {
+  tasks: typeof todayTasks.secretary;
+  pendingCount: number;
+  inpatientCount: number;
+}) {
+  return (
+    <div className="space-y-3 p-3">
+      {/* Hero banner */}
+      <div
+        className="relative overflow-hidden rounded-2xl p-4 text-primary-foreground"
+        style={{ background: "var(--gradient-primary)" }}
+      >
+        <div className="text-[10px] opacity-80">
+          {new Date().toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "long" })}
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" className="gap-1.5"><Camera className="h-3.5 w-3.5" />入院通知单 OCR</Button>
-          <Button size="sm" className="gap-1.5"><BellRing className="h-3.5 w-3.5" />发起护理交班</Button>
+        <div className="mt-1 text-base font-bold">早安, 张护士长 ☀️</div>
+        <div className="mt-0.5 text-[11px] opacity-90">今日 {tasks.length} 项待办, 2 例办理入院</div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <MiniStat label="待电话沟通" value={pendingCount} />
+          <MiniStat label="在院患者" value={inpatientCount} />
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Phone} label="待电话沟通" value={pendingAdmission.length} hint="今日需确认入院日期" tone="warning" />
-        <StatCard icon={Hospital} label="今日入院办理" value={2} hint="床号 01 / 06" tone="info" />
-        <StatCard icon={BedDouble} label="在院患者" value={inpatientPatients.length} hint="床位使用率 75%" tone="primary" />
-        <StatCard icon={BellRing} label="宣教推送" value={5} hint="入院前 1 日自动推送" tone="success" />
+      {/* Quick actions */}
+      <div className="grid grid-cols-4 gap-2 rounded-2xl border bg-card p-3">
+        <QuickAction icon={Camera} label="OCR 入院单" tone="bg-info/15 text-info" />
+        <QuickAction icon={BellRing} label="护理交班" tone="bg-primary/15 text-primary" />
+        <QuickAction icon={Phone} label="电话沟通" tone="bg-warning/20 text-warning-foreground" />
+        <QuickAction icon={ClipboardList} label="宣教推送" tone="bg-success/15 text-success" />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Today tasks */}
-        <SectionCard
-          title="今日待办"
-          description={`${tasks.length} 项任务`}
-          accent="bg-primary"
-          className="lg:col-span-1"
-        >
-          <ul className="divide-y">
-            {tasks.map((t) => (
-              <li key={t.id} className="flex items-start gap-3 px-4 py-3 hover:bg-muted/30">
-                <div className={cn(
-                  "mt-0.5 flex h-6 w-6 items-center justify-center rounded-md shrink-0",
-                  t.priority === "high" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"
-                )}>
-                  {t.type === "call" && <Phone className="h-3.5 w-3.5" />}
-                  {t.type === "education" && <BellRing className="h-3.5 w-3.5" />}
-                  {t.type === "admission" && <Hospital className="h-3.5 w-3.5" />}
-                  {t.type === "handover" && <FileText className="h-3.5 w-3.5" />}
-                  {t.type === "nursing" && <ClipboardList className="h-3.5 w-3.5" />}
+      {/* Tasks */}
+      <Card title="今日待办" rightLabel={`${tasks.length} 项`}>
+        <div className="divide-y">
+          {tasks.map((t) => (
+            <button
+              key={t.id}
+              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left active:bg-muted/40"
+            >
+              <div
+                className={cn(
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                  t.priority === "high" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground",
+                )}
+              >
+                {t.type === "call" && <Phone className="h-3.5 w-3.5" />}
+                {t.type === "education" && <BellRing className="h-3.5 w-3.5" />}
+                {t.type === "admission" && <Hospital className="h-3.5 w-3.5" />}
+                {t.type === "handover" && <ClipboardList className="h-3.5 w-3.5" />}
+                {t.type === "nursing" && <ClipboardList className="h-3.5 w-3.5" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[12px] font-medium">{t.title}</div>
+                <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                  {t.patientName && (
+                    <span>
+                      {t.patientName}
+                      {t.bedNo && ` · ${t.bedNo}床`}
+                    </span>
+                  )}
+                  {t.due && (
+                    <>
+                      <Clock className="h-2.5 w-2.5" />
+                      {t.due}
+                    </>
+                  )}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-medium text-foreground">{t.title}</div>
-                  <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
-                    {t.patientName && <span>{t.patientName}{t.bedNo && ` · ${t.bedNo}床`}</span>}
-                    {t.due && <><Clock className="h-3 w-3" />{t.due}</>}
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </SectionCard>
+              </div>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+          ))}
+        </div>
+      </Card>
 
-        {/* Patient lists */}
-        <div className="lg:col-span-2">
-          <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-            <div className="mb-3 flex items-center justify-between">
-              <TabsList>
-                <TabsTrigger value="outpatient" className="gap-1.5"><Building2 className="h-3.5 w-3.5" />门诊待入院</TabsTrigger>
-                <TabsTrigger value="inpatient" className="gap-1.5"><Hospital className="h-3.5 w-3.5" />住院 · 护理视图</TabsTrigger>
-              </TabsList>
-              <div className="flex gap-1">
-                <Badge variant="outline" className="text-[10px]">总表</Badge>
-                <Badge variant="outline" className="text-[10px]">备用视图</Badge>
+      {/* 08:00 交班摘要 */}
+      <Card title="08:00 护理交班摘要" rightLabel="自动生成">
+        <div className="space-y-1.5 px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
+          <div>
+            病人 <b className="text-foreground">12</b> · 昨入院 <b className="text-foreground">2</b> · 昨手术{" "}
+            <b className="text-foreground">2</b> · 今手术 <b className="text-foreground">3</b>
+          </div>
+          <div className="rounded-md bg-muted/50 p-2">
+            03床 孙顺英 昨日 (右) TKA, 引流暗血性液 50ml; 尿管 200ml。
+          </div>
+          <div className="rounded-md bg-warning/10 p-2 text-warning-foreground">
+            ⚠️ 05床 沟通难 · 02床 传染病 (自动导入)
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function OutpatientTab({ list }: { list: typeof patients }) {
+  return (
+    <div className="space-y-3 p-3">
+      <SearchBar placeholder="搜索姓名 / 门诊号" />
+
+      <div className="flex items-center justify-between px-1">
+        <div className="text-xs font-semibold">门诊待入院 · {list.length} 人</div>
+        <button className="text-[11px] text-primary">按日期排序 ▾</button>
+      </div>
+
+      <div className="space-y-2">
+        {list.map((p) => (
+          <div key={p.id} className="rounded-2xl border bg-card p-3" style={{ boxShadow: "var(--shadow-card)" }}>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-bold">{p.name}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {p.gender} · {p.age}岁
+                  </span>
+                  {p.urgent && (
+                    <span className="rounded bg-destructive/15 px-1 py-0.5 text-[9px] font-bold text-destructive">
+                      加急
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 text-[11px] text-foreground">{p.diagnosis}</div>
+                <div className="text-[10px] text-muted-foreground">拟行: {p.surgeryName} · {p.director}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-[9px] text-muted-foreground">拟入院</div>
+                <div className="rounded-md bg-warning/15 px-2 py-0.5 text-[10px] font-bold text-warning-foreground">
+                  {p.scheduledAdmission?.slice(5)}
+                </div>
               </div>
             </div>
 
-            <TabsContent value="outpatient" className="m-0">
-              <SectionCard title="待入院总表" description="拨打电话确认入院, 已确认日期支持手动修改" accent="bg-info">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-muted/40 text-[11px] text-muted-foreground">
-                        <th className="px-3 py-2 text-left font-medium">门诊号</th>
-                        <th className="px-3 py-2 text-left font-medium">姓名</th>
-                        <th className="px-3 py-2 text-left font-medium">诊断 / 拟手术</th>
-                        <th className="px-3 py-2 text-left font-medium">联系方式</th>
-                        <th className="px-3 py-2 text-left font-medium">主任</th>
-                        <th className="px-3 py-2 text-left font-medium">备注</th>
-                        <th className="px-3 py-2 text-left font-medium">拟入院日期</th>
-                        <th className="px-3 py-2 text-left font-medium">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {pendingAdmission.map((p, i) => (
-                        <tr key={p.id} className="hover:bg-muted/20">
-                          <td className="px-3 py-2 font-mono text-[10px] text-muted-foreground">{i + 1}</td>
-                          <td className="px-3 py-2">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-medium">{p.name}</span>
-                              {p.urgent && <Badge variant="destructive" className="h-4 px-1 text-[9px]">加急</Badge>}
-                            </div>
-                            <div className="text-[10px] text-muted-foreground">{p.gender} · {p.age}岁</div>
-                          </td>
-                          <td className="px-3 py-2">
-                            <div>{p.diagnosis}</div>
-                            <div className="text-[10px] text-muted-foreground">{p.surgeryName}</div>
-                          </td>
-                          <td className="px-3 py-2 font-mono text-[11px]">{p.phone}</td>
-                          <td className="px-3 py-2"><Badge variant="secondary" className="text-[10px]">{p.director}</Badge></td>
-                          <td className="px-3 py-2 text-[10px] text-muted-foreground">{p.notes ?? "—"}</td>
-                          <td className="px-3 py-2">
-                            <span className="rounded-md bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning-foreground">
-                              {p.scheduledAdmission}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2">
-                            <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-[11px]">
-                              <Phone className="h-3 w-3" />沟通
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </SectionCard>
-            </TabsContent>
-
-            <TabsContent value="inpatient" className="m-0 space-y-4">
-              <SectionCard title="08:00 护理交班记录" description="系统自动生成北京时间" accent="bg-primary">
-                <div className="space-y-2 px-5 py-4 text-xs leading-relaxed">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span className="font-mono">2024-04-22 08:00 — 2024-04-23 08:00 护理交班</span>
-                  </div>
-                  <p>
-                    病人总数: <b className="text-foreground">12</b> 人 (床号 01-12)。 昨日出院 <b className="text-foreground">1</b> 人 (08床), 昨日入院 <b className="text-foreground">2</b> 人 (01/06床), 昨日手术 <b className="text-foreground">2</b> 人 (03/05床), 今日手术 <b className="text-foreground">3</b> 人。
-                    <span className="ml-2 rounded bg-warning/15 px-1.5 py-0.5 text-[10px] text-warning-foreground">系统自动抓取</span>
-                  </p>
-                  <div className="rounded-md border bg-muted/30 p-3">
-                    <div className="font-medium text-foreground">昨日手术:</div>
-                    <p className="mt-1">03床 孙顺英, 昨日在 (全麻) 下行 (右) TKA, 心电监护 (有) 窦性心律 齐, 伤口敷料外观 (清洁) 干燥, 患肢足背动脉搏动可触及, 足趾活动好, 引流管引出暗血性液体 50 ml, 尿管 (有), 见淡黄色清亮液体引出 200 ml。</p>
-                  </div>
-                  <div className="rounded-md border bg-muted/30 p-3">
-                    <div className="font-medium text-foreground">特殊交班:</div>
-                    <p className="mt-1">05床 杨成轩 (沟通难·自动导入), 02床 吴翠花 (传染病·自动导入)。</p>
-                  </div>
-                </div>
-              </SectionCard>
-
-              <SectionCard title="床位视图 (总表)" description="一级视图 - 节点状态与提醒" accent="bg-primary">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-muted/40 text-[11px] text-muted-foreground">
-                        <th className="px-3 py-2 text-left">床号</th>
-                        <th className="px-3 py-2 text-left">姓名</th>
-                        <th className="px-3 py-2 text-left">诊断</th>
-                        <th className="px-3 py-2 text-left">手术</th>
-                        <th className="px-3 py-2 text-left">护理提醒</th>
-                        <th className="px-3 py-2 text-left">状态</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {inpatientPatients.map((p) => (
-                        <tr key={p.id} className="hover:bg-muted/20">
-                          <td className="px-3 py-2 font-mono font-bold">{p.bedNo}</td>
-                          <td className="px-3 py-2">
-                            <div className="flex items-center gap-1">
-                              <span className="font-medium">{p.name}</span>
-                              {p.isNew && <span className="flex h-4 w-4 items-center justify-center rounded-full bg-info text-[9px] font-bold text-white">新</span>}
-                              {p.infectious && <span className="flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white">传</span>}
-                              {p.communicationDifficult && <span className="flex h-4 w-4 items-center justify-center rounded-full bg-warning text-[9px] font-bold text-warning-foreground">沟</span>}
-                            </div>
-                            <div className="text-[10px] text-muted-foreground">{p.gender} {p.age}</div>
-                          </td>
-                          <td className="px-3 py-2 text-[11px]">{p.diagnosis}</td>
-                          <td className="px-3 py-2 text-[11px]">{p.surgeryName}</td>
-                          <td className="px-3 py-2 text-[11px]">
-                            {p.status === "in-surgery" && <Badge className="h-4 bg-warning/20 text-warning-foreground">引流监护</Badge>}
-                            {p.status === "post-op" && <Badge className="h-4 bg-info/20 text-info">补交伤口引流</Badge>}
-                            {p.status === "rehab" && <Badge className="h-4 bg-success/20 text-success">下地训练</Badge>}
-                            {p.status === "admitted" && <Badge className="h-4 bg-muted">术前准备</Badge>}
-                          </td>
-                          <td className="px-3 py-2">
-                            <StatusBadge status={p.status} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </SectionCard>
-            </TabsContent>
-          </Tabs>
-        </div>
+            <div className="mt-2.5 flex items-center justify-between border-t pt-2">
+              <div className="font-mono text-[10px] text-muted-foreground">{p.phone}</div>
+              <div className="flex gap-1.5">
+                <button className="flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-[10px] text-foreground active:bg-muted/70">
+                  <BellRing className="h-3 w-3" />宣教
+                </button>
+                <button
+                  className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-[10px] font-medium text-primary-foreground active:opacity-80"
+                >
+                  <Phone className="h-3 w-3" />沟通
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
+function InpatientTab({ list }: { list: typeof patients }) {
+  return (
+    <div className="space-y-3 p-3">
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { l: "总床位", v: 16, c: "text-foreground" },
+          { l: "在院", v: list.length, c: "text-primary" },
+          { l: "今日手术", v: 3, c: "text-warning-foreground" },
+        ].map((x) => (
+          <div key={x.l} className="rounded-xl border bg-card p-2.5 text-center">
+            <div className={cn("text-lg font-bold", x.c)}>{x.v}</div>
+            <div className="text-[10px] text-muted-foreground">{x.l}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between px-1">
+        <div className="text-xs font-semibold">床位视图</div>
+        <button className="text-[11px] text-primary">总表 ▾</button>
+      </div>
+
+      <div className="space-y-2">
+        {list.map((p) => (
+          <div key={p.id} className="rounded-2xl border bg-card p-3">
+            <div className="flex items-start gap-2.5">
+              <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <span className="text-[8px]">床号</span>
+                <span className="font-mono text-sm font-bold leading-none">{p.bedNo}</span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-bold">{p.name}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {p.gender}·{p.age}
+                  </span>
+                  {p.isNew && <Tag color="info">新</Tag>}
+                  {p.infectious && <Tag color="destructive">传</Tag>}
+                  {p.communicationDifficult && <Tag color="warning">沟</Tag>}
+                </div>
+                <div className="mt-0.5 text-[11px] text-muted-foreground">{p.diagnosis}</div>
+                <div className="text-[10px] text-muted-foreground">{p.surgeryName}</div>
+              </div>
+              <StatusPill status={p.status} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MeTab({ name, role }: { name: string; role: string }) {
+  return (
+    <div className="space-y-3 p-3">
+      <div className="rounded-2xl border bg-card p-4 text-center">
+        <div
+          className="mx-auto flex h-16 w-16 items-center justify-center rounded-full text-xl font-bold text-primary-foreground"
+          style={{ background: "var(--gradient-primary)" }}
+        >
+          {name.slice(0, 1)}
+        </div>
+        <div className="mt-2 text-base font-bold">{name}</div>
+        <div className="text-[11px] text-muted-foreground">{role}</div>
+      </div>
+      <Card title="本月数据">
+        <div className="grid grid-cols-3 gap-1 p-3 text-center">
+          {[
+            { l: "办理入院", v: 42 },
+            { l: "宣教推送", v: 86 },
+            { l: "电话沟通", v: 124 },
+          ].map((x) => (
+            <div key={x.l}>
+              <div className="text-base font-bold text-primary">{x.v}</div>
+              <div className="text-[10px] text-muted-foreground">{x.l}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+      <Card title="设置">
+        {["消息通知", "护理模板管理", "关于骨安"].map((s) => (
+          <button key={s} className="flex w-full items-center justify-between border-b px-3 py-3 text-[12px] last:border-b-0 active:bg-muted/30">
+            {s}
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+        ))}
+      </Card>
+    </div>
+  );
+}
+
+/* ---------- Shared mobile UI ---------- */
+
+export function Card({
+  title,
+  rightLabel,
+  children,
+}: {
+  title: string;
+  rightLabel?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
+      <div className="flex items-center justify-between border-b bg-card px-3 py-2">
+        <div className="text-[12px] font-semibold text-foreground">{title}</div>
+        {rightLabel && <div className="text-[10px] text-muted-foreground">{rightLabel}</div>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+export function MiniStat({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="rounded-xl bg-white/15 p-2 backdrop-blur">
+      <div className="text-lg font-bold leading-none">{value}</div>
+      <div className="mt-1 text-[10px] opacity-80">{label}</div>
+    </div>
+  );
+}
+
+export function QuickAction({
+  icon: Icon,
+  label,
+  tone,
+}: {
+  icon: React.ElementType;
+  label: string;
+  tone: string;
+}) {
+  return (
+    <button className="flex flex-col items-center gap-1.5 rounded-lg py-1.5 text-center active:bg-muted/40">
+      <div className={cn("flex h-9 w-9 items-center justify-center rounded-xl", tone)}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <span className="text-[10px] text-foreground">{label}</span>
+    </button>
+  );
+}
+
+export function SearchBar({ placeholder }: { placeholder: string }) {
+  return (
+    <div className="flex items-center gap-2 rounded-full bg-card px-3 py-2 shadow-sm">
+      <Search className="h-3.5 w-3.5 text-muted-foreground" />
+      <input className="flex-1 bg-transparent text-[12px] outline-none placeholder:text-muted-foreground" placeholder={placeholder} />
+      <Bell className="h-3.5 w-3.5 text-muted-foreground" />
+    </div>
+  );
+}
+
+export function Tag({ children, color }: { children: React.ReactNode; color: "info" | "destructive" | "warning" | "success" | "primary" }) {
+  const map = {
+    info: "bg-info text-white",
+    destructive: "bg-destructive text-destructive-foreground",
+    warning: "bg-warning text-warning-foreground",
+    success: "bg-success text-white",
+    primary: "bg-primary text-primary-foreground",
+  } as const;
+  return (
+    <span className={cn("inline-flex h-3.5 min-w-[14px] items-center justify-center rounded-full px-1 text-[9px] font-bold", map[color])}>
+      {children}
+    </span>
+  );
+}
+
+function StatusPill({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string; icon: React.ElementType }> = {
-    "admitted": { label: "在院", cls: "bg-info/15 text-info", icon: CheckCircle2 },
+    admitted: { label: "在院", cls: "bg-info/15 text-info", icon: CheckCircle2 },
     "in-surgery": { label: "今日手术", cls: "bg-warning/20 text-warning-foreground", icon: AlertCircle },
     "post-op": { label: "术后", cls: "bg-primary/15 text-primary", icon: Clock },
-    "rehab": { label: "康复中", cls: "bg-success/15 text-success", icon: CheckCircle2 },
+    rehab: { label: "康复", cls: "bg-success/15 text-success", icon: CheckCircle2 },
     "follow-up": { label: "随访", cls: "bg-muted text-muted-foreground", icon: CheckCircle2 },
   };
   const m = map[status];
   if (!m) return null;
   const Icon = m.icon;
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium", m.cls)}>
-      <Icon className="h-2.5 w-2.5" />{m.label}
+    <span className={cn("inline-flex shrink-0 items-center gap-0.5 self-start rounded-full px-1.5 py-0.5 text-[9px] font-medium", m.cls)}>
+      <Icon className="h-2.5 w-2.5" />
+      {m.label}
     </span>
   );
 }
