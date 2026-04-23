@@ -25,6 +25,7 @@ import { ActionSheet, ToastBanner } from "@/components/ActionSheet";
 import { HandoverSheet } from "@/components/HandoverSheet";
 import { VitalsSheet } from "@/components/VitalsSheet";
 import { EducationPushSheet } from "@/components/EducationPushSheet";
+import { BarChart, ChartCard, HBarRow, StatTile } from "@/components/WorkStats";
 import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -374,6 +375,15 @@ function InpatientTab({ list, onSelect, onBatchEducation }: { list: typeof patie
 }
 
 function MeTab({ name, role }: { name: string; role: string }) {
+  const weeklyAdmission = [
+    { label: "周一", value: 6 },
+    { label: "周二", value: 8 },
+    { label: "周三", value: 5 },
+    { label: "周四", value: 9 },
+    { label: "周五", value: 7 },
+    { label: "周六", value: 4 },
+    { label: "周日", value: 3 },
+  ];
   return (
     <div className="space-y-3 p-3">
       <div className="rounded-2xl border bg-card p-4 text-center">
@@ -386,20 +396,27 @@ function MeTab({ name, role }: { name: string; role: string }) {
         <div className="mt-2 text-base font-bold">{name}</div>
         <div className="text-[11px] text-muted-foreground">{role}</div>
       </div>
-      <Card title="本月数据">
-        <div className="grid grid-cols-3 gap-1 p-3 text-center">
-          {[
-            { l: "办理入院", v: 42 },
-            { l: "宣教推送", v: 86 },
-            { l: "电话沟通", v: 124 },
-          ].map((x) => (
-            <div key={x.l}>
-              <div className="text-base font-bold text-primary">{x.v}</div>
-              <div className="text-[10px] text-muted-foreground">{x.l}</div>
-            </div>
-          ))}
+
+      <div className="grid grid-cols-2 gap-2">
+        <StatTile icon={Hospital} label="本月办理入院" value={42} delta="↑ 12%" tone="primary" />
+        <StatTile icon={BellRing} label="宣教推送" value={86} delta="↑ 8%" tone="success" />
+        <StatTile icon={Phone} label="电话沟通" value={124} tone="info" />
+        <StatTile icon={Activity} label="指标录入" value={68} delta="↑ 5%" tone="warning" />
+      </div>
+
+      <ChartCard title="本周入院办理量" subtitle="共 42 例 · 较上周 +12%">
+        <BarChart data={weeklyAdmission} unit="例" />
+      </ChartCard>
+
+      <ChartCard title="工作分布（本月）">
+        <div className="space-y-2">
+          <HBarRow label="入院办理" value={42} total={320} color="hsl(var(--primary))" />
+          <HBarRow label="宣教推送" value={86} total={320} color="hsl(var(--success))" />
+          <HBarRow label="电话沟通" value={124} total={320} color="hsl(var(--info))" />
+          <HBarRow label="指标录入" value={68} total={320} color="hsl(var(--warning))" />
         </div>
-      </Card>
+      </ChartCard>
+
       <Card title="设置">
         {["消息通知", "护理模板管理", "关于骨安"].map((s) => (
           <button key={s} className="flex w-full items-center justify-between border-b px-3 py-3 text-[12px] last:border-b-0 active:bg-muted/30">

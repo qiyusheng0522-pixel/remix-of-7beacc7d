@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { Card, MiniStat, QuickAction, SearchBar } from "./SecretaryWorkbench";
+import { BarChart, ChartCard, LineChart, StatTile } from "@/components/WorkStats";
 import { ToastBanner } from "@/components/ActionSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
@@ -451,6 +452,21 @@ function HistoryTab() {
 }
 
 function MeTab() {
+  const weeklyOcr = [
+    { label: "周一", value: 4 },
+    { label: "周二", value: 6 },
+    { label: "周三", value: 3 },
+    { label: "周四", value: 7 },
+    { label: "周五", value: 5 },
+    { label: "周六", value: 2 },
+    { label: "周日", value: 1 },
+  ];
+  const accuracyTrend = [
+    { label: "1月", value: 86 },
+    { label: "2月", value: 89 },
+    { label: "3月", value: 92 },
+    { label: "4月", value: 95 },
+  ];
   return (
     <div className="space-y-3 p-3">
       <div className="rounded-2xl border bg-card p-4 text-center">
@@ -463,8 +479,24 @@ function MeTab() {
         <div className="mt-2 text-base font-bold">朱医生</div>
         <div className="text-[11px] text-muted-foreground">值班医生 · 骨科一病区</div>
       </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <StatTile icon={Camera} label="本周 OCR 录入" value={28} delta="↑ 15%" tone="info" />
+        <StatTile icon={AlertTriangle} label="标记异常" value={9} tone="warning" />
+        <StatTile icon={Send} label="推送团队" value={26} delta="↑ 8%" tone="primary" />
+        <StatTile icon={Edit3} label="手工修订" value={12} tone="success" />
+      </div>
+
+      <ChartCard title="本周量表录入趋势" subtitle="共 28 张 · 异常率 32%">
+        <BarChart data={weeklyOcr} unit="张" />
+      </ChartCard>
+
+      <ChartCard title="OCR 识别准确率趋势" subtitle="近 4 个月">
+        <LineChart data={accuracyTrend} />
+      </ChartCard>
+
       <Card title="设置">
-        {["排班日历", "OCR 历史记录", "推送规则", "关于骨安"].map((s) => (
+        {["OCR 历史记录", "推送规则", "关于骨安"].map((s) => (
           <button key={s} className="flex w-full items-center justify-between border-b px-3 py-3 text-[12px] last:border-b-0 active:bg-muted/30">
             {s}
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
