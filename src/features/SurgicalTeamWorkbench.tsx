@@ -12,20 +12,35 @@ import {
   ChevronRight,
   Sparkles,
   FileSignature,
+  MessageCircle,
+  FileSearch,
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { Card, MiniStat, QuickAction } from "./SecretaryWorkbench";
+import { PatientChatSheet } from "@/components/PatientChatSheet";
+import { PatientArchiveSheet } from "@/components/PatientArchiveSheet";
+import { ToastBanner } from "@/components/ActionSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
+import type { Patient } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type TabKey = "home" | "preop" | "intraop" | "me";
+type Overlay = { kind: "chat"; patient: Patient } | { kind: "archive"; patient: Patient } | null;
 
 export function SurgicalTeamWorkbench() {
   const [tab, setTab] = useState<TabKey>("home");
   const [decisions, setDecisions] = useState<Record<string, "go" | "hold" | undefined>>({});
+  const [overlay, setOverlay] = useState<Overlay>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
   const tomorrowSurgery = patients.filter((p) => p.status === "admitted" && p.preOpFindings);
   const todaySurgery = patients.filter((p) => p.status === "in-surgery");
   const tasks = todayTasks["surgical-team"];
+
+  const showToast = (t: string) => {
+    setToast(t);
+    setTimeout(() => setToast(null), 1800);
+  };
 
   return (
     <PhoneShell
@@ -45,24 +60,52 @@ export function SurgicalTeamWorkbench() {
       }
     >
       {tab === "home" && (
-        <HomeTab tomorrow={tomorrowSurgery.length} today={todaySurgery.length} tasks={tasks} />
+        <HomeTab tomorrow={tomorrowSurgery.length} today={todaySurgery.length} tasks={tasks} onQuick={(l) => showToast(`已打开 ${l}`)} />
       )}
       {tab === "preop" && (
-        <PreOpTab list={tomorrowSurgery} decisions={decisions} setDecisions={setDecisions} />
+        <PreOpTab
+          list={tomorrowSurgery}
+          decisions={decisions}
+          setDecisions={setDecisions}
+          onChat={(p) => setOverlay({ kind: "chat", patient: p })}
+          onArchive={(p) => setOverlay({ kind: "archive", patient: p })}
+          onConfirm={(p, d) => showToast(d === "go" ? `已确认如期手术：${p.name}` : `已退回手术待排：${p.name}`)}
+        />
       )}
-      {tab === "intraop" && <IntraOpTab list={todaySurgery} />}
+      {tab === "intraop" && (
+        <IntraOpTab
+          list={todaySurgery}
+          onSave={(p) => showToast(`术中量表已推送至治疗师 → ${p.name}`)}
+          onArchive={(p) => setOverlay({ kind: "archive", patient: p })}
+        />
+      )}
       {tab === "me" && <MeTab />}
+
+      {overlay?.kind === "chat" && (
+        <PatientChatSheet patient={overlay.patient} onClose={() => setOverlay(null)} selfRole="主" />
+      )}
+      {overlay?.kind === "archive" && (
+        <PatientArchiveSheet patient={overlay.patient} onClose={() => setOverlay(null)} />
+      )}
+      {toast && <ToastBanner text={toast} />}
     </PhoneShell>
   );
 }
 
-function HomeTab({ tomorrow, today, tasks }: { tomorrow: number; today: number; tasks: typeof todayTasks["surgical-team"] }) {
+function HomeTab({
+  tomorrow,
+  today,
+  tasks,
+  onQuick,
+}: {
+  tomorrow: number;
+  today: number;
+  tasks: typeof todayTasks["surgical-team"];
+  onQuick: (l: string) => void;
+}) {
   return (
     <div className="space-y-3 p-3">
-      <div
-        className="rounded-2xl p-4 text-primary-foreground"
-        style={{ background: "var(--gradient-primary)" }}
-      >
+      <div className="rounded-2xl p-4 text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
         <div className="text-[10px] opacity-80">主刀医生 · 王主任团队</div>
         <div className="mt-1 text-base font-bold">王主任, 您好 👋</div>
         <div className="mt-0.5 text-[11px] opacity-90">明日 {tomorrow} 例待评估, 今日 {today} 例手术中</div>
@@ -73,10 +116,10 @@ function HomeTab({ tomorrow, today, tasks }: { tomorrow: number; today: number; 
       </div>
 
       <div className="grid grid-cols-4 gap-2 rounded-2xl border bg-card p-3">
-        <QuickAction icon={Calendar} label="手术单" tone="bg-primary/15 text-primary" />
-        <QuickAction icon={FileSignature} label="术中量表" tone="bg-info/15 text-info" />
-        <QuickAction icon={Sparkles} label="AI 助手" tone="bg-success/15 text-success" />
-        <QuickAction icon={Users} label="团队" tone="bg-warning/20 text-warning-foreground" />
+        <QuickAction icon={Calendar} label="手术单" tone="bg-primary/15 text-primary" onClick={() => onQuick("手术单")} />
+        <QuickAction icon={FileSignature} label="术中量表" tone="bg-info/15 text-info" onClick={() => onQuick("术中量表")} />
+        <QuickAction icon={Sparkles} label="AI 助手" tone="bg-success/15 text-success" onClick={() => onQuick("AI 助手")} />
+        <QuickAction icon={Users} label="团队" tone="bg-warning/20 text-warning-foreground" onClick={() => onQuick("团队管理")} />
       </div>
 
       <Card title="今日待办" rightLabel={`${tasks.length} 项`}>
@@ -123,10 +166,16 @@ function PreOpTab({
   list,
   decisions,
   setDecisions,
+  onChat,
+  onArchive,
+  onConfirm,
 }: {
   list: typeof patients;
   decisions: Record<string, "go" | "hold" | undefined>;
   setDecisions: (cb: (s: Record<string, "go" | "hold" | undefined>) => Record<string, "go" | "hold" | undefined>) => void;
+  onChat: (p: Patient) => void;
+  onArchive: (p: Patient) => void;
+  onConfirm: (p: Patient, d: "go" | "hold") => void;
 }) {
   return (
     <div className="space-y-3 p-3">
@@ -139,17 +188,27 @@ function PreOpTab({
         return (
           <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
             <div className="border-b p-3">
-              <div className="flex items-center gap-1.5">
-                <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
-                  {p.bedNo}床
-                </span>
-                <span className="text-sm font-bold">{p.name}</span>
-                <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
-                {p.preOpAbnormal && (
-                  <span className="rounded-full bg-destructive/15 px-1.5 py-0.5 text-[9px] font-bold text-destructive">
-                    需评估
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
+                    {p.bedNo}床
                   </span>
-                )}
+                  <span className="text-sm font-bold">{p.name}</span>
+                  <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
+                  {p.preOpAbnormal && (
+                    <span className="rounded-full bg-destructive/15 px-1.5 py-0.5 text-[9px] font-bold text-destructive">
+                      需评估
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => onArchive(p)} className="rounded-full bg-muted p-1 text-muted-foreground active:bg-muted/70">
+                    <FileSearch className="h-3 w-3" />
+                  </button>
+                  <button onClick={() => onChat(p)} className="rounded-full bg-info/10 p-1 text-info active:opacity-80">
+                    <MessageCircle className="h-3 w-3" />
+                  </button>
+                </div>
               </div>
               <div className="mt-1 text-[10px] text-muted-foreground">
                 {p.diagnosis} · {p.surgeryName} · {p.director}
@@ -173,13 +232,22 @@ function PreOpTab({
             {d === "hold" && (
               <div className="mx-3 mb-2 flex items-center gap-1.5 rounded-md bg-destructive/5 p-2 text-[10px] text-destructive">
                 <AlertTriangle className="h-3 w-3" />
-                已退回手术待排, 治疗师/护士同步收到通知
+                已退回手术待排, 治疗师 / 护士同步收到通知
+              </div>
+            )}
+            {d === "go" && (
+              <div className="mx-3 mb-2 flex items-center gap-1.5 rounded-md bg-success/5 p-2 text-[10px] text-success">
+                <CheckCircle2 className="h-3 w-3" />
+                已确认如期手术, 已通知麻醉与治疗师
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-0 border-t">
               <button
-                onClick={() => setDecisions((s) => ({ ...s, [p.id]: "hold" }))}
+                onClick={() => {
+                  setDecisions((s) => ({ ...s, [p.id]: "hold" }));
+                  onConfirm(p, "hold");
+                }}
                 className={cn(
                   "flex items-center justify-center gap-1 py-2.5 text-[11px] active:bg-muted/40",
                   d === "hold" ? "bg-destructive/10 font-medium text-destructive" : "text-foreground",
@@ -188,7 +256,10 @@ function PreOpTab({
                 <XCircle className="h-3 w-3" />暂缓 / 退回
               </button>
               <button
-                onClick={() => setDecisions((s) => ({ ...s, [p.id]: "go" }))}
+                onClick={() => {
+                  setDecisions((s) => ({ ...s, [p.id]: "go" }));
+                  onConfirm(p, "go");
+                }}
                 className={cn(
                   "flex items-center justify-center gap-1 border-l py-2.5 text-[11px] active:bg-muted/40",
                   d === "go" ? "bg-primary/10 font-medium text-primary" : "text-foreground",
@@ -204,7 +275,15 @@ function PreOpTab({
   );
 }
 
-function IntraOpTab({ list }: { list: typeof patients }) {
+function IntraOpTab({
+  list,
+  onSave,
+  onArchive,
+}: {
+  list: typeof patients;
+  onSave: (p: Patient) => void;
+  onArchive: (p: Patient) => void;
+}) {
   return (
     <div className="space-y-3 p-3">
       <div className="rounded-2xl border bg-primary/5 p-3 text-[11px] text-primary">
@@ -214,7 +293,7 @@ function IntraOpTab({ list }: { list: typeof patients }) {
       {list.map((p) => (
         <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
           <div className="flex items-center justify-between border-b p-3">
-            <div>
+            <button onClick={() => onArchive(p)} className="text-left">
               <div className="flex items-center gap-1.5">
                 <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
                   {p.bedNo}床
@@ -227,7 +306,7 @@ function IntraOpTab({ list }: { list: typeof patients }) {
               <div className="mt-1 text-[10px] text-muted-foreground">
                 {p.surgeryName} · 1号台 · 主刀 王主任
               </div>
-            </div>
+            </button>
             <span className="rounded-full border px-1.5 py-0.5 text-[9px] text-muted-foreground">朱医生 编辑中</span>
           </div>
 
@@ -253,6 +332,7 @@ function IntraOpTab({ list }: { list: typeof patients }) {
               保存后推送至 <span className="font-medium text-primary">朱年鑫 治疗师</span>
             </span>
             <button
+              onClick={() => onSave(p)}
               className="rounded-full px-3 py-1 text-[11px] font-medium text-primary-foreground active:opacity-80"
               style={{ background: "var(--gradient-primary)" }}
             >

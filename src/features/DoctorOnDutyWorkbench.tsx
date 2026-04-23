@@ -11,19 +11,35 @@ import {
   User,
   ChevronRight,
   CheckCircle2,
+  MessageCircle,
+  FileSearch,
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { Card, MiniStat, QuickAction, SearchBar } from "./SecretaryWorkbench";
+import { PatientChatSheet } from "@/components/PatientChatSheet";
+import { PatientArchiveSheet } from "@/components/PatientArchiveSheet";
+import { ActionSheet, ToastBanner } from "@/components/ActionSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
+import type { Patient } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type TabKey = "home" | "scales" | "history" | "me";
+type Overlay = { kind: "chat"; patient: Patient } | { kind: "archive"; patient: Patient } | null;
 
 export function DoctorOnDutyWorkbench() {
   const [tab, setTab] = useState<TabKey>("home");
+  const [overlay, setOverlay] = useState<Overlay>(null);
+  const [actionPatient, setActionPatient] = useState<Patient | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
   const tomorrowSurgery = patients.filter((p) => p.status === "admitted" && p.preOpFindings);
   const tasks = todayTasks["doctor-on-duty"];
   const abnormalCount = tomorrowSurgery.filter((p) => p.preOpAbnormal).length;
+
+  const showToast = (t: string) => {
+    setToast(t);
+    setTimeout(() => setToast(null), 1800);
+  };
 
   return (
     <PhoneShell
@@ -43,11 +59,42 @@ export function DoctorOnDutyWorkbench() {
       }
     >
       {tab === "home" && (
-        <HomeTab tasks={tasks} surgeryCount={tomorrowSurgery.length} abnormalCount={abnormalCount} />
+        <HomeTab
+          tasks={tasks}
+          surgeryCount={tomorrowSurgery.length}
+          abnormalCount={abnormalCount}
+          onQuick={(l) => showToast(`已打开 ${l}`)}
+        />
       )}
-      {tab === "scales" && <ScalesTab list={tomorrowSurgery} />}
+      {tab === "scales" && (
+        <ScalesTab
+          list={tomorrowSurgery}
+          onSelect={(p) => setActionPatient(p)}
+          onPush={(p) => showToast(`已推送至王主任团队 → ${p.name}`)}
+          onReOcr={() => showToast("启动 OCR 摄像头...")}
+        />
+      )}
       {tab === "history" && <HistoryTab />}
       {tab === "me" && <MeTab />}
+
+      {overlay?.kind === "chat" && (
+        <PatientChatSheet patient={overlay.patient} onClose={() => setOverlay(null)} selfRole="医" />
+      )}
+      {overlay?.kind === "archive" && (
+        <PatientArchiveSheet patient={overlay.patient} onClose={() => setOverlay(null)} />
+      )}
+      <ActionSheet
+        open={!!actionPatient}
+        title={actionPatient ? `${actionPatient.name} · ${actionPatient.bedNo}床` : ""}
+        onClose={() => setActionPatient(null)}
+        actions={[
+          { label: "在线沟通", tone: "primary", onClick: () => actionPatient && setOverlay({ kind: "chat", patient: actionPatient }) },
+          { label: "查看患者档案", onClick: () => actionPatient && setOverlay({ kind: "archive", patient: actionPatient }) },
+          { label: "重新 OCR 录入", onClick: () => showToast("启动 OCR 摄像头...") },
+          { label: "推送至手术团队", tone: "primary", onClick: () => actionPatient && showToast(`已推送 → ${actionPatient.name}`) },
+        ]}
+      />
+      {toast && <ToastBanner text={toast} />}
     </PhoneShell>
   );
 }
@@ -56,18 +103,17 @@ function HomeTab({
   tasks,
   surgeryCount,
   abnormalCount,
+  onQuick,
 }: {
   tasks: typeof todayTasks["doctor-on-duty"];
   surgeryCount: number;
   abnormalCount: number;
+  onQuick: (l: string) => void;
 }) {
   return (
     <div className="space-y-3 p-3">
-      <div
-        className="rounded-2xl p-4 text-primary-foreground"
-        style={{ background: "var(--gradient-primary)" }}
-      >
-        <div className="text-[10px] opacity-80">值班医生 · {new Date().toLocaleDateString("zh-CN")}</div>
+      <div className="rounded-2xl p-4 text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
+        <div className="text-[10px] opacity-80">值班医生 · 工作概览</div>
         <div className="mt-1 text-base font-bold">朱医生, 您今日值班 🌙</div>
         <div className="mt-0.5 text-[11px] opacity-90">
           明日手术 {surgeryCount} 例待录入量表, {abnormalCount} 例异常需关注
@@ -79,16 +125,16 @@ function HomeTab({
       </div>
 
       <div className="grid grid-cols-4 gap-2 rounded-2xl border bg-card p-3">
-        <QuickAction icon={Camera} label="OCR 录入" tone="bg-primary/15 text-primary" />
-        <QuickAction icon={Sparkles} label="AI 异常分析" tone="bg-info/15 text-info" />
-        <QuickAction icon={Send} label="推送团队" tone="bg-success/15 text-success" />
-        <QuickAction icon={AlertTriangle} label="预警中心" tone="bg-destructive/10 text-destructive" />
+        <QuickAction icon={Camera} label="OCR 录入" tone="bg-primary/15 text-primary" onClick={() => onQuick("OCR 录入")} />
+        <QuickAction icon={Sparkles} label="AI 异常分析" tone="bg-info/15 text-info" onClick={() => onQuick("AI 异常分析")} />
+        <QuickAction icon={Send} label="推送团队" tone="bg-success/15 text-success" onClick={() => onQuick("推送团队")} />
+        <QuickAction icon={AlertTriangle} label="预警中心" tone="bg-destructive/10 text-destructive" onClick={() => onQuick("预警中心")} />
       </div>
 
       <Card title="今日待办" rightLabel={`${tasks.length} 项`}>
         <div className="divide-y">
           {tasks.map((t) => (
-            <div key={t.id} className="flex items-center gap-2.5 px-3 py-2.5">
+            <button key={t.id} className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left active:bg-muted/40">
               <div
                 className={cn(
                   "flex h-7 w-7 items-center justify-center rounded-md",
@@ -105,7 +151,7 @@ function HomeTab({
                 </div>
               </div>
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-            </div>
+            </button>
           ))}
         </div>
       </Card>
@@ -113,12 +159,23 @@ function HomeTab({
   );
 }
 
-function ScalesTab({ list }: { list: typeof patients }) {
+function ScalesTab({
+  list,
+  onSelect,
+  onPush,
+  onReOcr,
+}: {
+  list: typeof patients;
+  onSelect: (p: Patient) => void;
+  onPush: (p: Patient) => void;
+  onReOcr: () => void;
+}) {
   return (
     <div className="space-y-3 p-3">
       <SearchBar placeholder="搜索患者 / 床号" />
 
       <button
+        onClick={onReOcr}
         className="flex w-full items-center justify-center gap-2 rounded-full py-2.5 text-sm font-medium text-primary-foreground active:opacity-90"
         style={{ background: "var(--gradient-primary)" }}
       >
@@ -130,26 +187,29 @@ function ScalesTab({ list }: { list: typeof patients }) {
 
       {list.map((p) => (
         <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
-          <div className="flex items-start justify-between gap-2 border-b p-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
-                  {p.bedNo}床
-                </span>
-                <span className="text-sm font-bold">{p.name}</span>
-                <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
-                {p.preOpAbnormal && (
-                  <span className="inline-flex items-center gap-0.5 rounded-full bg-destructive/15 px-1.5 py-0.5 text-[9px] font-bold text-destructive">
-                    <AlertTriangle className="h-2.5 w-2.5" />异常
+          <button onClick={() => onSelect(p)} className="block w-full text-left">
+            <div className="flex items-start justify-between gap-2 border-b p-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
+                    {p.bedNo}床
                   </span>
-                )}
+                  <span className="text-sm font-bold">{p.name}</span>
+                  <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
+                  {p.preOpAbnormal && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-destructive/15 px-1.5 py-0.5 text-[9px] font-bold text-destructive">
+                      <AlertTriangle className="h-2.5 w-2.5" />异常
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 text-[10px] text-muted-foreground">
+                  {p.diagnosis} · {p.surgeryName}
+                </div>
+                <div className="text-[10px] text-muted-foreground">{p.director} · 手术 {p.surgeryDate}</div>
               </div>
-              <div className="mt-1 text-[10px] text-muted-foreground">
-                {p.diagnosis} · {p.surgeryName}
-              </div>
-              <div className="text-[10px] text-muted-foreground">{p.director} · 手术 {p.surgeryDate}</div>
+              <FileSearch className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
-          </div>
+          </button>
 
           <div className="grid grid-cols-2 gap-2 p-3">
             {p.preOpFindings?.map((f) => (
@@ -178,15 +238,18 @@ function ScalesTab({ list }: { list: typeof patients }) {
             )}
           >
             {p.preOpAbnormal ? <AlertTriangle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
-            {p.preOpAbnormal ? "等待医疗团队评估是否如期手术" : "建议如期手术 · 已推送团队"}
+            {p.preOpAbnormal ? "等待手术团队评估是否如期手术" : "建议如期手术 · 已推送团队"}
           </div>
 
-          <div className="grid grid-cols-2 gap-0 border-t">
-            <button className="flex items-center justify-center gap-1 py-2.5 text-[11px] text-foreground active:bg-muted/40">
-              <Camera className="h-3 w-3" />重新 OCR
+          <div className="grid grid-cols-3 gap-0 border-t">
+            <button onClick={onReOcr} className="flex items-center justify-center gap-1 py-2.5 text-[11px] text-foreground active:bg-muted/40">
+              <Camera className="h-3 w-3" />重OCR
             </button>
-            <button className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] font-medium text-primary active:bg-muted/40">
-              <Send className="h-3 w-3" />推送团队
+            <button onClick={() => onSelect(p)} className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] text-info active:bg-muted/40">
+              <MessageCircle className="h-3 w-3" />沟通
+            </button>
+            <button onClick={() => onPush(p)} className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] font-medium text-primary active:bg-muted/40">
+              <Send className="h-3 w-3" />推送
             </button>
           </div>
         </div>
