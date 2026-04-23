@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { Card, MiniStat, QuickAction } from "./SecretaryWorkbench";
+import { BarChart, ChartCard, DonutChart, StatTile } from "@/components/WorkStats";
 import { ToastBanner } from "@/components/ActionSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
@@ -480,6 +481,12 @@ function FormField({ label, value }: { label: string; value: string }) {
 }
 
 function MeTab() {
+  const monthlySurgery = [
+    { label: "1月", value: 22 },
+    { label: "2月", value: 28 },
+    { label: "3月", value: 31 },
+    { label: "4月", value: 26 },
+  ];
   return (
     <div className="space-y-3 p-3">
       <div className="rounded-2xl border bg-card p-4 text-center">
@@ -492,6 +499,26 @@ function MeTab() {
         <div className="mt-2 text-base font-bold">王主任</div>
         <div className="text-[11px] text-muted-foreground">骨科主任医师 · 主刀</div>
       </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <StatTile icon={CheckCircle2} label="本月手术" value={26} delta="↑ 4 例" tone="primary" />
+        <StatTile icon={Sparkles} label="AI 采纳率" value="91%" tone="info" />
+        <StatTile icon={XCircle} label="暂缓 / 退回" value={3} tone="warning" />
+        <StatTile icon={FileSignature} label="术中量表" value={26} tone="success" />
+      </div>
+
+      <ChartCard title="近 4 个月手术量" subtitle="共 107 例 · 成功率 100%">
+        <BarChart data={monthlySurgery} unit="例" color="hsl(var(--primary))" />
+      </ChartCard>
+
+      <ChartCard title="手术决策分布（本月）">
+        <div className="flex items-center justify-around py-2">
+          <DonutChart value={88} label="如期手术" color="hsl(var(--success))" />
+          <DonutChart value={8} label="暂缓" color="hsl(var(--warning))" />
+          <DonutChart value={4} label="退回" color="hsl(var(--destructive))" />
+        </div>
+      </ChartCard>
+
       <Card title="我的团队">
         {[
           { n: "王主任", r: "主刀医师" },
