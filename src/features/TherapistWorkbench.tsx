@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { Card, MiniStat, QuickAction } from "./SecretaryWorkbench";
+import { BarChart, ChartCard, HBarRow, LineChart, StatTile } from "@/components/WorkStats";
 import { PatientChatSheet } from "@/components/PatientChatSheet";
 import { PatientArchiveSheet } from "@/components/PatientArchiveSheet";
 import { ActionSheet, ToastBanner } from "@/components/ActionSheet";
@@ -470,6 +471,21 @@ function PlanEditorSheet({ patient, onClose, onSave }: { patient: Patient; onClo
 }
 
 function MeTab() {
+  const weeklyPlan = [
+    { label: "周一", value: 5 },
+    { label: "周二", value: 7 },
+    { label: "周三", value: 6 },
+    { label: "周四", value: 8 },
+    { label: "周五", value: 4 },
+    { label: "周六", value: 3 },
+    { label: "周日", value: 2 },
+  ];
+  const reachRate = [
+    { label: "1月", value: 88 },
+    { label: "2月", value: 90 },
+    { label: "3月", value: 92 },
+    { label: "4月", value: 94 },
+  ];
   return (
     <div className="space-y-3 p-3">
       <div className="rounded-2xl border bg-card p-4 text-center">
@@ -482,6 +498,31 @@ function MeTab() {
         <div className="mt-2 text-base font-bold">朱年鑫</div>
         <div className="text-[11px] text-muted-foreground">康复治疗师 · 5 年经验</div>
       </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <StatTile icon={Sparkles} label="AI 方案确认" value={35} delta="↑ 12%" tone="info" />
+        <StatTile icon={ClipboardCheck} label="康复评估" value={48} tone="primary" />
+        <StatTile icon={CheckCircle2} label="出院评估通过" value={18} delta="达标 94%" tone="success" />
+        <StatTile icon={Edit3} label="方案修订" value={7} tone="warning" />
+      </div>
+
+      <ChartCard title="本周方案处理量" subtitle="共 35 份 · AI 直接采纳 28 份">
+        <BarChart data={weeklyPlan} unit="份" color="hsl(var(--info))" />
+      </ChartCard>
+
+      <ChartCard title="康复达标率趋势" subtitle="近 4 个月">
+        <LineChart data={reachRate} stroke="hsl(var(--success))" />
+      </ChartCard>
+
+      <ChartCard title="工作类型占比（本月）">
+        <div className="space-y-2">
+          <HBarRow label="AI 方案确认" value={35} total={108} color="hsl(var(--info))" />
+          <HBarRow label="康复评估" value={48} total={108} color="hsl(var(--primary))" />
+          <HBarRow label="出院评估" value={18} total={108} color="hsl(var(--success))" />
+          <HBarRow label="方案修订" value={7} total={108} color="hsl(var(--warning))" />
+        </div>
+      </ChartCard>
+
       <Card title="设置">
         {["AI 康复方案模板", "评估表单管理", "院内治疗记录模板", "关于骨安"].map((s) => (
           <button key={s} className="flex w-full items-center justify-between border-b px-3 py-3 text-[12px] last:border-b-0 active:bg-muted/30">
