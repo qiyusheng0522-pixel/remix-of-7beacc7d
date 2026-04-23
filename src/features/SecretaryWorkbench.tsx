@@ -155,8 +155,8 @@ function HomeTab({
   tasks: typeof todayTasks.secretary;
   pendingCount: number;
   inpatientCount: number;
-  onQuick: (label: string) => void;
-  onTask: (title: string) => void;
+  onQuick: (key: "ocr" | "handover" | "vitals" | "education") => void;
+  onTask: (taskType: string) => void;
 }) {
   return (
     <div className="space-y-3 p-3">
@@ -175,10 +175,10 @@ function HomeTab({
       </div>
 
       <div className="grid grid-cols-4 gap-2 rounded-2xl border bg-card p-3">
-        <QuickAction icon={Camera} label="OCR 入院单" tone="bg-info/15 text-info" onClick={() => onQuick("OCR 入院单")} />
-        <QuickAction icon={BellRing} label="护理交班" tone="bg-primary/15 text-primary" onClick={() => onQuick("护理交班")} />
-        <QuickAction icon={Phone} label="电话沟通" tone="bg-warning/20 text-warning-foreground" onClick={() => onQuick("电话沟通")} />
-        <QuickAction icon={ClipboardList} label="宣教推送" tone="bg-success/15 text-success" onClick={() => onQuick("宣教推送")} />
+        <QuickAction icon={Camera} label="OCR 入院单" tone="bg-info/15 text-info" onClick={() => onQuick("ocr")} />
+        <QuickAction icon={ClipboardList} label="护理交班" tone="bg-primary/15 text-primary" onClick={() => onQuick("handover")} />
+        <QuickAction icon={Activity} label="指标录入" tone="bg-warning/20 text-warning-foreground" onClick={() => onQuick("vitals")} />
+        <QuickAction icon={BellRing} label="宣教推送" tone="bg-success/15 text-success" onClick={() => onQuick("education")} />
       </div>
 
       <Card title="今日待办" rightLabel={`${tasks.length} 项`}>
@@ -186,7 +186,7 @@ function HomeTab({
           {tasks.map((t) => (
             <button
               key={t.id}
-              onClick={() => onTask(t.title)}
+              onClick={() => onTask(t.type)}
               className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left active:bg-muted/40"
             >
               <div
@@ -199,7 +199,7 @@ function HomeTab({
                 {t.type === "education" && <BellRing className="h-3.5 w-3.5" />}
                 {t.type === "admission" && <Hospital className="h-3.5 w-3.5" />}
                 {t.type === "handover" && <ClipboardList className="h-3.5 w-3.5" />}
-                {t.type === "nursing" && <ClipboardList className="h-3.5 w-3.5" />}
+                {t.type === "nursing" && <Activity className="h-3.5 w-3.5" />}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[12px] font-medium">{t.title}</div>
@@ -246,14 +246,14 @@ function OutpatientTab({
   list,
   onChat,
   onArchive,
-  onPhone,
   onEducation,
+  onBatchEducation,
 }: {
   list: typeof patients;
   onChat: (p: Patient) => void;
   onArchive: (p: Patient) => void;
-  onPhone: (p: Patient) => void;
   onEducation: (p: Patient) => void;
+  onBatchEducation: () => void;
 }) {
   return (
     <div className="space-y-3 p-3">
@@ -261,7 +261,9 @@ function OutpatientTab({
 
       <div className="flex items-center justify-between px-1">
         <div className="text-xs font-semibold">门诊待入院 · {list.length} 人</div>
-        <button className="text-[11px] text-primary">按拟入院日期 ▾</button>
+        <button onClick={onBatchEducation} className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
+          <BellRing className="h-3 w-3" />批量宣教
+        </button>
       </div>
 
       <div className="space-y-2">
@@ -304,15 +306,10 @@ function OutpatientTab({
                 </button>
                 <button
                   onClick={() => onChat(p)}
-                  className="flex items-center gap-1 rounded-md bg-info/15 px-2 py-1 text-[10px] text-info active:opacity-80"
+                  className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium text-primary-foreground active:opacity-80"
+                  style={{ background: "var(--gradient-primary)" }}
                 >
                   <MessageCircle className="h-3 w-3" />沟通
-                </button>
-                <button
-                  onClick={() => onPhone(p)}
-                  className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-[10px] font-medium text-primary-foreground active:opacity-80"
-                >
-                  <Phone className="h-3 w-3" />电话
                 </button>
               </div>
             </div>
@@ -323,7 +320,7 @@ function OutpatientTab({
   );
 }
 
-function InpatientTab({ list, onSelect }: { list: typeof patients; onSelect: (p: Patient) => void }) {
+function InpatientTab({ list, onSelect, onBatchEducation }: { list: typeof patients; onSelect: (p: Patient) => void; onBatchEducation: () => void }) {
   return (
     <div className="space-y-3 p-3">
       <div className="grid grid-cols-3 gap-2">
@@ -341,7 +338,9 @@ function InpatientTab({ list, onSelect }: { list: typeof patients; onSelect: (p:
 
       <div className="flex items-center justify-between px-1">
         <div className="text-xs font-semibold">床位视图</div>
-        <button className="text-[11px] text-primary">总表 ▾</button>
+        <button onClick={onBatchEducation} className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
+          <BellRing className="h-3 w-3" />批量宣教
+        </button>
       </div>
 
       <div className="space-y-2">
