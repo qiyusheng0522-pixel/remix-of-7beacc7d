@@ -5,32 +5,30 @@ import {
   Stethoscope,
   AlertTriangle,
   Calendar,
-  Users,
   Home,
   ClipboardEdit,
   User,
-  ChevronRight,
   Sparkles,
   FileSignature,
-  MessageCircle,
-  FileSearch,
+  ArrowLeft,
+  Send,
+  RotateCcw,
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { Card, MiniStat, QuickAction } from "./SecretaryWorkbench";
-import { PatientChatSheet } from "@/components/PatientChatSheet";
-import { PatientArchiveSheet } from "@/components/PatientArchiveSheet";
 import { ToastBanner } from "@/components/ActionSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type TabKey = "home" | "preop" | "intraop" | "me";
-type Overlay = { kind: "chat"; patient: Patient } | { kind: "archive"; patient: Patient } | null;
+type Decision = "go" | "hold" | "return";
 
 export function SurgicalTeamWorkbench() {
   const [tab, setTab] = useState<TabKey>("home");
-  const [decisions, setDecisions] = useState<Record<string, "go" | "hold" | undefined>>({});
-  const [overlay, setOverlay] = useState<Overlay>(null);
+  const [decisions, setDecisions] = useState<Record<string, Decision | undefined>>({});
+  const [reasonFor, setReasonFor] = useState<{ patient: Patient; decision: "hold" | "return" } | null>(null);
+  const [intraOpFor, setIntraOpFor] = useState<Patient | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   const tomorrowSurgery = patients.filter((p) => p.status === "admitted" && p.preOpFindings);
@@ -52,7 +50,7 @@ export function SurgicalTeamWorkbench() {
           onChange={(k) => setTab(k as TabKey)}
           items={[
             { key: "home", label: "首页", icon: Home, badge: tasks.length },
-            { key: "preop", label: "术前评估", icon: Calendar, badge: tomorrowSurgery.length },
+            { key: "preop", label: "手术确认", icon: Calendar, badge: tomorrowSurgery.length },
             { key: "intraop", label: "术中量表", icon: ClipboardEdit, badge: todaySurgery.length },
             { key: "me", label: "我的", icon: User },
           ]}
@@ -60,32 +58,53 @@ export function SurgicalTeamWorkbench() {
       }
     >
       {tab === "home" && (
-        <HomeTab tomorrow={tomorrowSurgery.length} today={todaySurgery.length} tasks={tasks} onQuick={(l) => showToast(`已打开 ${l}`)} />
+        <HomeTab tomorrow={tomorrowSurgery.length} today={todaySurgery.length} tasks={tasks} onJump={(t) => setTab(t)} />
       )}
       {tab === "preop" && (
         <PreOpTab
           list={tomorrowSurgery}
           decisions={decisions}
-          setDecisions={setDecisions}
-          onChat={(p) => setOverlay({ kind: "chat", patient: p })}
-          onArchive={(p) => setOverlay({ kind: "archive", patient: p })}
-          onConfirm={(p, d) => showToast(d === "go" ? `已确认如期手术：${p.name}` : `已退回手术待排：${p.name}`)}
+          onGo={(p) => {
+            setDecisions((s) => ({ ...s, [p.id]: "go" }));
+            showToast(`已确认如期手术：${p.name}`);
+          }}
+          onHold={(p) => setReasonFor({ patient: p, decision: "hold" })}
+          onReturn={(p) => setReasonFor({ patient: p, decision: "return" })}
         />
       )}
       {tab === "intraop" && (
         <IntraOpTab
           list={todaySurgery}
-          onSave={(p) => showToast(`术中量表已推送至治疗师 → ${p.name}`)}
-          onArchive={(p) => setOverlay({ kind: "archive", patient: p })}
+          onOpen={(p) => setIntraOpFor(p)}
         />
       )}
       {tab === "me" && <MeTab />}
 
-      {overlay?.kind === "chat" && (
-        <PatientChatSheet patient={overlay.patient} onClose={() => setOverlay(null)} selfRole="主" />
+      {reasonFor && (
+        <ReasonSheet
+          patient={reasonFor.patient}
+          decision={reasonFor.decision}
+          onClose={() => setReasonFor(null)}
+          onSubmit={(reason) => {
+            setDecisions((s) => ({ ...s, [reasonFor.patient.id]: reasonFor.decision }));
+            showToast(
+              reasonFor.decision === "hold"
+                ? `已暂缓 ${reasonFor.patient.name}（${reason.slice(0, 12)}...）`
+                : `已退回手术待排：${reasonFor.patient.name}`,
+            );
+            setReasonFor(null);
+          }}
+        />
       )}
-      {overlay?.kind === "archive" && (
-        <PatientArchiveSheet patient={overlay.patient} onClose={() => setOverlay(null)} />
+      {intraOpFor && (
+        <IntraOpEditor
+          patient={intraOpFor}
+          onClose={() => setIntraOpFor(null)}
+          onSave={() => {
+            showToast(`术中量表已推送至治疗师 → ${intraOpFor.name}`);
+            setIntraOpFor(null);
+          }}
+        />
       )}
       {toast && <ToastBanner text={toast} />}
     </PhoneShell>
@@ -96,30 +115,28 @@ function HomeTab({
   tomorrow,
   today,
   tasks,
-  onQuick,
+  onJump,
 }: {
   tomorrow: number;
   today: number;
   tasks: typeof todayTasks["surgical-team"];
-  onQuick: (l: string) => void;
+  onJump: (t: TabKey) => void;
 }) {
   return (
     <div className="space-y-3 p-3">
       <div className="rounded-2xl p-4 text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
         <div className="text-[10px] opacity-80">主刀医生 · 王主任团队</div>
         <div className="mt-1 text-base font-bold">王主任, 您好 👋</div>
-        <div className="mt-0.5 text-[11px] opacity-90">明日 {tomorrow} 例待评估, 今日 {today} 例手术中</div>
+        <div className="mt-0.5 text-[11px] opacity-90">明日 {tomorrow} 例待确认, 今日 {today} 例手术中</div>
         <div className="mt-3 grid grid-cols-2 gap-2">
           <MiniStat label="明日手术" value={tomorrow} />
           <MiniStat label="今日手术" value={today} />
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-2 rounded-2xl border bg-card p-3">
-        <QuickAction icon={Calendar} label="手术单" tone="bg-primary/15 text-primary" onClick={() => onQuick("手术单")} />
-        <QuickAction icon={FileSignature} label="术中量表" tone="bg-info/15 text-info" onClick={() => onQuick("术中量表")} />
-        <QuickAction icon={Sparkles} label="AI 助手" tone="bg-success/15 text-success" onClick={() => onQuick("AI 助手")} />
-        <QuickAction icon={Users} label="团队" tone="bg-warning/20 text-warning-foreground" onClick={() => onQuick("团队管理")} />
+      <div className="grid grid-cols-2 gap-2 rounded-2xl border bg-card p-3">
+        <QuickAction icon={Calendar} label="今日手术确认" tone="bg-primary/15 text-primary" onClick={() => onJump("preop")} />
+        <QuickAction icon={FileSignature} label="术中量表" tone="bg-info/15 text-info" onClick={() => onJump("intraop")} />
       </div>
 
       <Card title="今日待办" rightLabel={`${tasks.length} 项`}>
@@ -162,60 +179,63 @@ function HomeTab({
   );
 }
 
+/* ---------- AI 结论生成（基于术前量表） ---------- */
+function aiConclusion(p: Patient): { recommendation: "go" | "hold"; summary: string; reasons: string[] } {
+  const abnormal = p.preOpFindings?.filter((f) => f.abnormal) ?? [];
+  if (abnormal.length === 0) {
+    return {
+      recommendation: "go",
+      summary: "AI 结论：建议如期手术",
+      reasons: ["术前各项检查指标均在正常范围", "无明显手术禁忌", "可按计划开展"],
+    };
+  }
+  return {
+    recommendation: "hold",
+    summary: `AI 结论：建议暂缓手术（${abnormal.length} 项异常）`,
+    reasons: abnormal.map((a) => `${a.label} ${a.value} 偏离正常范围，建议复查或会诊`),
+  };
+}
+
 function PreOpTab({
   list,
   decisions,
-  setDecisions,
-  onChat,
-  onArchive,
-  onConfirm,
+  onGo,
+  onHold,
+  onReturn,
 }: {
   list: typeof patients;
-  decisions: Record<string, "go" | "hold" | undefined>;
-  setDecisions: (cb: (s: Record<string, "go" | "hold" | undefined>) => Record<string, "go" | "hold" | undefined>) => void;
-  onChat: (p: Patient) => void;
-  onArchive: (p: Patient) => void;
-  onConfirm: (p: Patient, d: "go" | "hold") => void;
+  decisions: Record<string, Decision | undefined>;
+  onGo: (p: Patient) => void;
+  onHold: (p: Patient) => void;
+  onReturn: (p: Patient) => void;
 }) {
   return (
     <div className="space-y-3 p-3">
-      <div className="rounded-2xl border bg-warning/5 p-3 text-[11px] text-warning-foreground">
-        💡 审核值班医生录入的术前量表, 决定是否如期手术。
+      <div className="rounded-2xl border bg-info/5 p-3 text-[11px] text-info">
+        <Sparkles className="mr-1 inline h-3 w-3" />
+        AI 已根据值班医生录入的术前量表给出结论，请确认是否如期手术。
       </div>
 
       {list.map((p) => {
         const d = decisions[p.id];
+        const ai = aiConclusion(p);
         return (
           <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
             <div className="border-b p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
-                    {p.bedNo}床
-                  </span>
-                  <span className="text-sm font-bold">{p.name}</span>
-                  <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
-                  {p.preOpAbnormal && (
-                    <span className="rounded-full bg-destructive/15 px-1.5 py-0.5 text-[9px] font-bold text-destructive">
-                      需评估
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={() => onArchive(p)} className="rounded-full bg-muted p-1 text-muted-foreground active:bg-muted/70">
-                    <FileSearch className="h-3 w-3" />
-                  </button>
-                  <button onClick={() => onChat(p)} className="rounded-full bg-info/10 p-1 text-info active:opacity-80">
-                    <MessageCircle className="h-3 w-3" />
-                  </button>
-                </div>
+              <div className="flex items-center gap-1.5">
+                <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
+                  {p.bedNo}床
+                </span>
+                <span className="text-sm font-bold">{p.name}</span>
+                <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
               </div>
               <div className="mt-1 text-[10px] text-muted-foreground">
                 {p.diagnosis} · {p.surgeryName} · {p.director}
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-1 p-3">
+            {/* 术前量表 */}
+            <div className="flex flex-wrap gap-1 border-b p-3">
               {p.preOpFindings?.map((f) => (
                 <span
                   key={f.label}
@@ -229,37 +249,58 @@ function PreOpTab({
               ))}
             </div>
 
-            {d === "hold" && (
-              <div className="mx-3 mb-2 flex items-center gap-1.5 rounded-md bg-destructive/5 p-2 text-[10px] text-destructive">
-                <AlertTriangle className="h-3 w-3" />
-                已退回手术待排, 治疗师 / 护士同步收到通知
+            {/* AI 结论 */}
+            <div className={cn("border-b p-3", ai.recommendation === "go" ? "bg-success/5" : "bg-destructive/5")}>
+              <div className={cn("flex items-center gap-1 text-[11px] font-bold", ai.recommendation === "go" ? "text-success" : "text-destructive")}>
+                <Sparkles className="h-3 w-3" />
+                {ai.summary}
+              </div>
+              <ul className="mt-1 space-y-0.5 pl-3 text-[10px] text-muted-foreground">
+                {ai.reasons.map((r, i) => (
+                  <li key={i} className="list-disc">{r}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* 已决策状态 */}
+            {d === "go" && (
+              <div className="mx-3 mb-2 flex items-center gap-1.5 rounded-md bg-success/10 p-2 text-[10px] text-success">
+                <CheckCircle2 className="h-3 w-3" />已确认如期手术，已通知麻醉与治疗师
               </div>
             )}
-            {d === "go" && (
-              <div className="mx-3 mb-2 flex items-center gap-1.5 rounded-md bg-success/5 p-2 text-[10px] text-success">
-                <CheckCircle2 className="h-3 w-3" />
-                已确认如期手术, 已通知麻醉与治疗师
+            {d === "hold" && (
+              <div className="mx-3 mb-2 flex items-center gap-1.5 rounded-md bg-warning/10 p-2 text-[10px] text-warning-foreground">
+                <AlertTriangle className="h-3 w-3" />已暂缓手术，理由已归档
+              </div>
+            )}
+            {d === "return" && (
+              <div className="mx-3 mb-2 flex items-center gap-1.5 rounded-md bg-destructive/10 p-2 text-[10px] text-destructive">
+                <RotateCcw className="h-3 w-3" />已退回手术待排
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-0 border-t">
+            {/* 决策按钮 */}
+            <div className="grid grid-cols-3 gap-0 border-t">
               <button
-                onClick={() => {
-                  setDecisions((s) => ({ ...s, [p.id]: "hold" }));
-                  onConfirm(p, "hold");
-                }}
+                onClick={() => onReturn(p)}
                 className={cn(
                   "flex items-center justify-center gap-1 py-2.5 text-[11px] active:bg-muted/40",
-                  d === "hold" ? "bg-destructive/10 font-medium text-destructive" : "text-foreground",
+                  d === "return" ? "bg-destructive/10 font-medium text-destructive" : "text-foreground",
                 )}
               >
-                <XCircle className="h-3 w-3" />暂缓 / 退回
+                <RotateCcw className="h-3 w-3" />退回
               </button>
               <button
-                onClick={() => {
-                  setDecisions((s) => ({ ...s, [p.id]: "go" }));
-                  onConfirm(p, "go");
-                }}
+                onClick={() => onHold(p)}
+                className={cn(
+                  "flex items-center justify-center gap-1 border-l py-2.5 text-[11px] active:bg-muted/40",
+                  d === "hold" ? "bg-warning/15 font-medium text-warning-foreground" : "text-foreground",
+                )}
+              >
+                <XCircle className="h-3 w-3" />暂缓
+              </button>
+              <button
+                onClick={() => onGo(p)}
                 className={cn(
                   "flex items-center justify-center gap-1 border-l py-2.5 text-[11px] active:bg-muted/40",
                   d === "go" ? "bg-primary/10 font-medium text-primary" : "text-foreground",
@@ -275,25 +316,100 @@ function PreOpTab({
   );
 }
 
-function IntraOpTab({
-  list,
-  onSave,
-  onArchive,
+/* ---------- 暂缓 / 退回 理由收集 ---------- */
+function ReasonSheet({
+  patient,
+  decision,
+  onClose,
+  onSubmit,
 }: {
-  list: typeof patients;
-  onSave: (p: Patient) => void;
-  onArchive: (p: Patient) => void;
+  patient: Patient;
+  decision: "hold" | "return";
+  onClose: () => void;
+  onSubmit: (reason: string) => void;
 }) {
+  const [reason, setReason] = useState("");
+  const presets =
+    decision === "hold"
+      ? ["Hb 偏低，需输血或铁剂", "血压未控制，需内科会诊", "凝血异常，需血液科评估", "近 1 周感染发热"]
+      : ["患者临时拒绝手术", "需补充影像学检查", "改约其他时段", "需多学科会诊后再排期"];
+
+  return (
+    <div className="absolute inset-0 z-50 flex flex-col bg-background">
+      <div className="flex items-center justify-between border-b bg-card px-3 py-2.5">
+        <button onClick={onClose} className="text-[12px] text-muted-foreground">
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="text-[13px] font-semibold">
+          {decision === "hold" ? "暂缓手术" : "退回手术待排"} · {patient.name}
+        </div>
+        <div className="w-4" />
+      </div>
+
+      <div className="flex-1 space-y-3 overflow-y-auto p-3">
+        <div className="rounded-2xl border bg-card p-3 text-[11px] text-muted-foreground">
+          <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">{patient.bedNo}床</span>{" "}
+          {patient.name} · {patient.surgeryName}
+        </div>
+
+        <div>
+          <div className="mb-1.5 text-[11px] font-semibold">常见理由（点选）</div>
+          <div className="flex flex-wrap gap-1.5">
+            {presets.map((p) => (
+              <button
+                key={p}
+                onClick={() => setReason((r) => (r ? `${r}；${p}` : p))}
+                className="rounded-full border bg-card px-2.5 py-1 text-[11px] text-foreground active:bg-muted/40"
+              >
+                + {p}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-1.5 text-[11px] font-semibold">详细说明 *</div>
+          <textarea
+            rows={5}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder={decision === "hold" ? "请填写暂缓理由，将通知治疗师与护士..." : "请填写退回理由，将通知值班医生重新排期..."}
+            className="w-full rounded-xl border bg-card p-3 text-[12px] outline-none focus:border-primary"
+          />
+        </div>
+      </div>
+
+      <div className="border-t bg-card p-3">
+        <button
+          disabled={!reason.trim()}
+          onClick={() => onSubmit(reason)}
+          className="flex w-full items-center justify-center gap-1.5 rounded-full py-2.5 text-[13px] font-medium text-primary-foreground disabled:opacity-40"
+          style={{ background: "var(--gradient-primary)" }}
+        >
+          <Send className="h-4 w-4" />提交并通知相关角色
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- 术中量表列表 ---------- */
+function IntraOpTab({ list, onOpen }: { list: typeof patients; onOpen: (p: Patient) => void }) {
   return (
     <div className="space-y-3 p-3">
       <div className="rounded-2xl border bg-primary/5 p-3 text-[11px] text-primary">
-        ✏️ 团队任一成员可填写, 内容将自动同步治疗师。
+        ✏️ 团队任一成员可填写，保存后自动同步治疗师。
       </div>
 
       {list.map((p) => (
-        <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
-          <div className="flex items-center justify-between border-b p-3">
-            <button onClick={() => onArchive(p)} className="text-left">
+        <button
+          key={p.id}
+          onClick={() => onOpen(p)}
+          className="block w-full overflow-hidden rounded-2xl border bg-card text-left active:bg-muted/30"
+          style={{ boxShadow: "var(--shadow-card)" }}
+        >
+          <div className="flex items-center justify-between p-3">
+            <div>
               <div className="flex items-center gap-1.5">
                 <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
                   {p.bedNo}床
@@ -306,48 +422,57 @@ function IntraOpTab({
               <div className="mt-1 text-[10px] text-muted-foreground">
                 {p.surgeryName} · 1号台 · 主刀 王主任
               </div>
-            </button>
-            <span className="rounded-full border px-1.5 py-0.5 text-[9px] text-muted-foreground">朱医生 编辑中</span>
-          </div>
-
-          <div className="space-y-2 p-3">
-            <FormField label="麻醉方式" value="全麻 + 神经阻滞" />
-            <FormField label="术中出血量" value="180 ml" />
-            <FormField label="假体型号" value="DePuy Sigma #4" />
-            <FormField label="术中并发症" value="无" />
-
-            <div>
-              <div className="mb-1 text-[10px] font-medium text-muted-foreground">医生建议（推送至治疗师）</div>
-              <textarea
-                className="w-full rounded-lg border bg-muted/20 p-2 text-[11px] outline-none focus:border-primary"
-                rows={3}
-                defaultValue="术后第1日开始 SLR 训练; 屈膝训练 0-60° 起步; 注意伤口引流, 24小时后拔管。"
-              />
             </div>
+            <FileSignature className="h-4 w-4 text-primary" />
           </div>
-
-          <div className="flex items-center justify-between border-t bg-muted/20 px-3 py-2 text-[10px] text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <ChevronRight className="h-3 w-3" />
-              保存后推送至 <span className="font-medium text-primary">朱年鑫 治疗师</span>
-            </span>
-            <button
-              onClick={() => onSave(p)}
-              className="rounded-full px-3 py-1 text-[11px] font-medium text-primary-foreground active:opacity-80"
-              style={{ background: "var(--gradient-primary)" }}
-            >
-              保存并推送
-            </button>
-          </div>
-        </div>
+        </button>
       ))}
+    </div>
+  );
+}
+
+/* ---------- 术中量表编辑 ---------- */
+function IntraOpEditor({ patient, onClose, onSave }: { patient: Patient; onClose: () => void; onSave: () => void }) {
+  return (
+    <div className="absolute inset-0 z-50 flex flex-col bg-background">
+      <div className="flex items-center justify-between border-b bg-card px-3 py-2.5">
+        <button onClick={onClose} className="text-[12px] text-muted-foreground">
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="text-[13px] font-semibold">术中量表 · {patient.name}</div>
+        <button onClick={onSave} className="rounded-full bg-primary px-3 py-1 text-[11px] font-medium text-primary-foreground">
+          保存推送
+        </button>
+      </div>
+      <div className="flex-1 space-y-2 overflow-y-auto p-3">
+        <div className="rounded-2xl border bg-warning/5 p-3 text-[10px] text-warning-foreground">
+          <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono font-bold text-primary">{patient.bedNo}床</span>{" "}
+          {patient.surgeryName} · 朱医生 编辑中
+        </div>
+        <FormField label="麻醉方式" value="全麻 + 神经阻滞" />
+        <FormField label="术中出血量" value="180 ml" />
+        <FormField label="假体型号" value="DePuy Sigma #4" />
+        <FormField label="手术时长" value="92 min" />
+        <FormField label="术中并发症" value="无" />
+        <div>
+          <div className="mb-1 text-[10px] font-medium text-muted-foreground">医生建议（推送至治疗师）</div>
+          <textarea
+            className="w-full rounded-lg border bg-card p-2 text-[11px] outline-none focus:border-primary"
+            rows={4}
+            defaultValue="术后第1日开始 SLR 训练；屈膝训练 0-60° 起步；注意伤口引流，24小时后拔管。"
+          />
+        </div>
+      </div>
+      <div className="border-t bg-muted/20 px-3 py-2 text-[10px] text-muted-foreground">
+        保存后将推送至 <span className="font-medium text-primary">朱年鑫 治疗师</span>
+      </div>
     </div>
   );
 }
 
 function FormField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-2.5 py-2">
+    <div className="flex items-center justify-between rounded-lg border bg-card px-2.5 py-2">
       <span className="text-[10px] text-muted-foreground">{label}</span>
       <input className="bg-transparent text-right text-[11px] font-medium outline-none" defaultValue={value} />
     </div>
