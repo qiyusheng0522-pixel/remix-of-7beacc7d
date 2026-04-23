@@ -16,11 +16,15 @@ import {
   User,
   MessageCircle,
   FileSearch,
+  Activity,
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { PatientChatSheet } from "@/components/PatientChatSheet";
 import { PatientArchiveSheet } from "@/components/PatientArchiveSheet";
 import { ActionSheet, ToastBanner } from "@/components/ActionSheet";
+import { HandoverSheet } from "@/components/HandoverSheet";
+import { VitalsSheet } from "@/components/VitalsSheet";
+import { EducationPushSheet } from "@/components/EducationPushSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -29,6 +33,9 @@ type TabKey = "home" | "outpatient" | "inpatient" | "me";
 type Overlay =
   | { kind: "chat"; patient: Patient }
   | { kind: "archive"; patient: Patient }
+  | { kind: "vitals"; patient: Patient }
+  | { kind: "handover" }
+  | { kind: "education"; candidates: Patient[] }
   | null;
 
 export function SecretaryWorkbench() {
@@ -44,6 +51,16 @@ export function SecretaryWorkbench() {
   const showToast = (t: string) => {
     setToast(t);
     setTimeout(() => setToast(null), 1800);
+  };
+
+  const handleTaskClick = (taskType: string) => {
+    if (taskType === "handover") setOverlay({ kind: "handover" });
+    else if (taskType === "education") setOverlay({ kind: "education", candidates: pendingAdmission });
+    else if (taskType === "nursing") {
+      const target = inpatientPatients.find((p) => p.bedNo === "05");
+      if (target) setOverlay({ kind: "vitals", patient: target });
+    } else if (taskType === "call") setTab("outpatient");
+    else if (taskType === "admission") setTab("inpatient");
   };
 
   return (
@@ -68,8 +85,16 @@ export function SecretaryWorkbench() {
           tasks={tasks}
           pendingCount={pendingAdmission.length}
           inpatientCount={inpatientPatients.length}
-          onQuick={(label) => showToast(`已打开 ${label}`)}
-          onTask={(t) => showToast(`已打开：${t}`)}
+          onQuick={(key) => {
+            if (key === "handover") setOverlay({ kind: "handover" });
+            else if (key === "education") setOverlay({ kind: "education", candidates: [...pendingAdmission, ...inpatientPatients] });
+            else if (key === "ocr") showToast("打开 OCR 入院单识别");
+            else if (key === "vitals") {
+              const target = inpatientPatients[0];
+              if (target) setOverlay({ kind: "vitals", patient: target });
+            }
+          }}
+          onTask={handleTaskClick}
         />
       )}
       {tab === "outpatient" && (
@@ -77,14 +102,15 @@ export function SecretaryWorkbench() {
           list={pendingAdmission}
           onChat={(p) => setOverlay({ kind: "chat", patient: p })}
           onArchive={(p) => setOverlay({ kind: "archive", patient: p })}
-          onPhone={(p) => showToast(`正在拨号：${p.phone}`)}
-          onEducation={(p) => showToast(`已推送宣教 → ${p.name}`)}
+          onEducation={(p) => setOverlay({ kind: "education", candidates: [p] })}
+          onBatchEducation={() => setOverlay({ kind: "education", candidates: pendingAdmission })}
         />
       )}
       {tab === "inpatient" && (
         <InpatientTab
           list={inpatientPatients}
           onSelect={(p) => setActionPatient(p)}
+          onBatchEducation={() => setOverlay({ kind: "education", candidates: inpatientPatients })}
         />
       )}
       {tab === "me" && <MeTab name="张护士长" role="科室秘书 / 责任护士" />}
@@ -95,15 +121,23 @@ export function SecretaryWorkbench() {
       {overlay?.kind === "archive" && (
         <PatientArchiveSheet patient={overlay.patient} onClose={() => setOverlay(null)} />
       )}
+      {overlay?.kind === "vitals" && (
+        <VitalsSheet patient={overlay.patient} onClose={() => setOverlay(null)} onSave={(t) => { showToast(t); setOverlay(null); }} />
+      )}
+      {overlay?.kind === "handover" && <HandoverSheet onClose={() => setOverlay(null)} />}
+      {overlay?.kind === "education" && (
+        <EducationPushSheet candidates={overlay.candidates} onClose={() => setOverlay(null)} onPush={showToast} />
+      )}
+
       <ActionSheet
         open={!!actionPatient}
         title={actionPatient ? `${actionPatient.name} · ${actionPatient.bedNo}床` : ""}
         onClose={() => setActionPatient(null)}
         actions={[
-          { label: "在线沟通", tone: "primary", onClick: () => actionPatient && setOverlay({ kind: "chat", patient: actionPatient }) },
+          { label: "在线沟通（含电话/档案）", tone: "primary", onClick: () => actionPatient && setOverlay({ kind: "chat", patient: actionPatient }) },
           { label: "查看患者档案", onClick: () => actionPatient && setOverlay({ kind: "archive", patient: actionPatient }) },
-          { label: "床旁导管记录", onClick: () => showToast("已打开导管记录单") },
-          { label: "发送宣教内容", onClick: () => showToast("已推送宣教") },
+          { label: "录入住院指标（DVT/生命体征）", onClick: () => actionPatient && setOverlay({ kind: "vitals", patient: actionPatient }) },
+          { label: "推送宣教内容", onClick: () => actionPatient && setOverlay({ kind: "education", candidates: [actionPatient] }) },
         ]}
       />
       {toast && <ToastBanner text={toast} />}
