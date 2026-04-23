@@ -14,18 +14,37 @@ import {
   Home,
   ClipboardList,
   User,
+  MessageCircle,
+  FileSearch,
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
+import { PatientChatSheet } from "@/components/PatientChatSheet";
+import { PatientArchiveSheet } from "@/components/PatientArchiveSheet";
+import { ActionSheet, ToastBanner } from "@/components/ActionSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
+import type { Patient } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type TabKey = "home" | "outpatient" | "inpatient" | "me";
+type Overlay =
+  | { kind: "chat"; patient: Patient }
+  | { kind: "archive"; patient: Patient }
+  | null;
 
 export function SecretaryWorkbench() {
   const [tab, setTab] = useState<TabKey>("home");
+  const [overlay, setOverlay] = useState<Overlay>(null);
+  const [actionPatient, setActionPatient] = useState<Patient | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
   const pendingAdmission = patients.filter((p) => p.status === "outpatient-pending");
   const inpatientPatients = patients.filter((p) => p.department === "inpatient");
   const tasks = todayTasks.secretary;
+
+  const showToast = (t: string) => {
+    setToast(t);
+    setTimeout(() => setToast(null), 1800);
+  };
 
   return (
     <PhoneShell
@@ -44,58 +63,96 @@ export function SecretaryWorkbench() {
         />
       }
     >
-      {tab === "home" && <HomeTab tasks={tasks} pendingCount={pendingAdmission.length} inpatientCount={inpatientPatients.length} />}
-      {tab === "outpatient" && <OutpatientTab list={pendingAdmission} />}
-      {tab === "inpatient" && <InpatientTab list={inpatientPatients} />}
+      {tab === "home" && (
+        <HomeTab
+          tasks={tasks}
+          pendingCount={pendingAdmission.length}
+          inpatientCount={inpatientPatients.length}
+          onQuick={(label) => showToast(`已打开 ${label}`)}
+          onTask={(t) => showToast(`已打开：${t}`)}
+        />
+      )}
+      {tab === "outpatient" && (
+        <OutpatientTab
+          list={pendingAdmission}
+          onChat={(p) => setOverlay({ kind: "chat", patient: p })}
+          onArchive={(p) => setOverlay({ kind: "archive", patient: p })}
+          onPhone={(p) => showToast(`正在拨号：${p.phone}`)}
+          onEducation={(p) => showToast(`已推送宣教 → ${p.name}`)}
+        />
+      )}
+      {tab === "inpatient" && (
+        <InpatientTab
+          list={inpatientPatients}
+          onSelect={(p) => setActionPatient(p)}
+        />
+      )}
       {tab === "me" && <MeTab name="张护士长" role="科室秘书 / 责任护士" />}
+
+      {overlay?.kind === "chat" && (
+        <PatientChatSheet patient={overlay.patient} onClose={() => setOverlay(null)} selfRole="护士" />
+      )}
+      {overlay?.kind === "archive" && (
+        <PatientArchiveSheet patient={overlay.patient} onClose={() => setOverlay(null)} />
+      )}
+      <ActionSheet
+        open={!!actionPatient}
+        title={actionPatient ? `${actionPatient.name} · ${actionPatient.bedNo}床` : ""}
+        onClose={() => setActionPatient(null)}
+        actions={[
+          { label: "在线沟通", tone: "primary", onClick: () => actionPatient && setOverlay({ kind: "chat", patient: actionPatient }) },
+          { label: "查看患者档案", onClick: () => actionPatient && setOverlay({ kind: "archive", patient: actionPatient }) },
+          { label: "床旁导管记录", onClick: () => showToast("已打开导管记录单") },
+          { label: "发送宣教内容", onClick: () => showToast("已推送宣教") },
+        ]}
+      />
+      {toast && <ToastBanner text={toast} />}
     </PhoneShell>
   );
 }
-
-/* ---------- Tabs ---------- */
 
 function HomeTab({
   tasks,
   pendingCount,
   inpatientCount,
+  onQuick,
+  onTask,
 }: {
   tasks: typeof todayTasks.secretary;
   pendingCount: number;
   inpatientCount: number;
+  onQuick: (label: string) => void;
+  onTask: (title: string) => void;
 }) {
   return (
     <div className="space-y-3 p-3">
-      {/* Hero banner */}
       <div
         className="relative overflow-hidden rounded-2xl p-4 text-primary-foreground"
         style={{ background: "var(--gradient-primary)" }}
       >
-        <div className="text-[10px] opacity-80">
-          {new Date().toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "long" })}
-        </div>
+        <div className="text-[10px] opacity-80">今日工作概览</div>
         <div className="mt-1 text-base font-bold">早安, 张护士长 ☀️</div>
-        <div className="mt-0.5 text-[11px] opacity-90">今日 {tasks.length} 项待办, 2 例办理入院</div>
+        <div className="mt-0.5 text-[11px] opacity-90">今日 {tasks.length} 项待办 · 2 例办理入院</div>
 
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <MiniStat label="待电话沟通" value={pendingCount} />
+          <MiniStat label="门诊待入院" value={pendingCount} />
           <MiniStat label="在院患者" value={inpatientCount} />
         </div>
       </div>
 
-      {/* Quick actions */}
       <div className="grid grid-cols-4 gap-2 rounded-2xl border bg-card p-3">
-        <QuickAction icon={Camera} label="OCR 入院单" tone="bg-info/15 text-info" />
-        <QuickAction icon={BellRing} label="护理交班" tone="bg-primary/15 text-primary" />
-        <QuickAction icon={Phone} label="电话沟通" tone="bg-warning/20 text-warning-foreground" />
-        <QuickAction icon={ClipboardList} label="宣教推送" tone="bg-success/15 text-success" />
+        <QuickAction icon={Camera} label="OCR 入院单" tone="bg-info/15 text-info" onClick={() => onQuick("OCR 入院单")} />
+        <QuickAction icon={BellRing} label="护理交班" tone="bg-primary/15 text-primary" onClick={() => onQuick("护理交班")} />
+        <QuickAction icon={Phone} label="电话沟通" tone="bg-warning/20 text-warning-foreground" onClick={() => onQuick("电话沟通")} />
+        <QuickAction icon={ClipboardList} label="宣教推送" tone="bg-success/15 text-success" onClick={() => onQuick("宣教推送")} />
       </div>
 
-      {/* Tasks */}
       <Card title="今日待办" rightLabel={`${tasks.length} 项`}>
         <div className="divide-y">
           {tasks.map((t) => (
             <button
               key={t.id}
+              onClick={() => onTask(t.title)}
               className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left active:bg-muted/40"
             >
               <div
@@ -133,7 +190,6 @@ function HomeTab({
         </div>
       </Card>
 
-      {/* 08:00 交班摘要 */}
       <Card title="08:00 护理交班摘要" rightLabel="自动生成">
         <div className="space-y-1.5 px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
           <div>
@@ -144,7 +200,7 @@ function HomeTab({
             03床 孙顺英 昨日 (右) TKA, 引流暗血性液 50ml; 尿管 200ml。
           </div>
           <div className="rounded-md bg-warning/10 p-2 text-warning-foreground">
-            ⚠️ 05床 沟通难 · 02床 传染病 (自动导入)
+            ⚠️ 05床 沟通障碍 · 02床 传染病史 (自动导入)
           </div>
         </div>
       </Card>
@@ -152,21 +208,33 @@ function HomeTab({
   );
 }
 
-function OutpatientTab({ list }: { list: typeof patients }) {
+function OutpatientTab({
+  list,
+  onChat,
+  onArchive,
+  onPhone,
+  onEducation,
+}: {
+  list: typeof patients;
+  onChat: (p: Patient) => void;
+  onArchive: (p: Patient) => void;
+  onPhone: (p: Patient) => void;
+  onEducation: (p: Patient) => void;
+}) {
   return (
     <div className="space-y-3 p-3">
       <SearchBar placeholder="搜索姓名 / 门诊号" />
 
       <div className="flex items-center justify-between px-1">
         <div className="text-xs font-semibold">门诊待入院 · {list.length} 人</div>
-        <button className="text-[11px] text-primary">按日期排序 ▾</button>
+        <button className="text-[11px] text-primary">按拟入院日期 ▾</button>
       </div>
 
       <div className="space-y-2">
         {list.map((p) => (
           <div key={p.id} className="rounded-2xl border bg-card p-3" style={{ boxShadow: "var(--shadow-card)" }}>
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-1">
+              <button onClick={() => onArchive(p)} className="min-w-0 flex-1 text-left">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-bold">{p.name}</span>
                   <span className="text-[10px] text-muted-foreground">
@@ -180,7 +248,7 @@ function OutpatientTab({ list }: { list: typeof patients }) {
                 </div>
                 <div className="mt-1 text-[11px] text-foreground">{p.diagnosis}</div>
                 <div className="text-[10px] text-muted-foreground">拟行: {p.surgeryName} · {p.director}</div>
-              </div>
+              </button>
               <div className="text-right">
                 <div className="text-[9px] text-muted-foreground">拟入院</div>
                 <div className="rounded-md bg-warning/15 px-2 py-0.5 text-[10px] font-bold text-warning-foreground">
@@ -190,15 +258,27 @@ function OutpatientTab({ list }: { list: typeof patients }) {
             </div>
 
             <div className="mt-2.5 flex items-center justify-between border-t pt-2">
-              <div className="font-mono text-[10px] text-muted-foreground">{p.phone}</div>
+              <button onClick={() => onArchive(p)} className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+                <FileSearch className="h-3 w-3" />档案
+              </button>
               <div className="flex gap-1.5">
-                <button className="flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-[10px] text-foreground active:bg-muted/70">
+                <button
+                  onClick={() => onEducation(p)}
+                  className="flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-[10px] text-foreground active:bg-muted/70"
+                >
                   <BellRing className="h-3 w-3" />宣教
                 </button>
                 <button
+                  onClick={() => onChat(p)}
+                  className="flex items-center gap-1 rounded-md bg-info/15 px-2 py-1 text-[10px] text-info active:opacity-80"
+                >
+                  <MessageCircle className="h-3 w-3" />沟通
+                </button>
+                <button
+                  onClick={() => onPhone(p)}
                   className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-[10px] font-medium text-primary-foreground active:opacity-80"
                 >
-                  <Phone className="h-3 w-3" />沟通
+                  <Phone className="h-3 w-3" />电话
                 </button>
               </div>
             </div>
@@ -209,7 +289,7 @@ function OutpatientTab({ list }: { list: typeof patients }) {
   );
 }
 
-function InpatientTab({ list }: { list: typeof patients }) {
+function InpatientTab({ list, onSelect }: { list: typeof patients; onSelect: (p: Patient) => void }) {
   return (
     <div className="space-y-3 p-3">
       <div className="grid grid-cols-3 gap-2">
@@ -232,7 +312,7 @@ function InpatientTab({ list }: { list: typeof patients }) {
 
       <div className="space-y-2">
         {list.map((p) => (
-          <div key={p.id} className="rounded-2xl border bg-card p-3">
+          <button key={p.id} onClick={() => onSelect(p)} className="w-full rounded-2xl border bg-card p-3 text-left active:bg-muted/30">
             <div className="flex items-start gap-2.5">
               <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <span className="text-[8px]">床号</span>
@@ -253,7 +333,7 @@ function InpatientTab({ list }: { list: typeof patients }) {
               </div>
               <StatusPill status={p.status} />
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </div>
@@ -334,13 +414,15 @@ export function QuickAction({
   icon: Icon,
   label,
   tone,
+  onClick,
 }: {
   icon: React.ElementType;
   label: string;
   tone: string;
+  onClick?: () => void;
 }) {
   return (
-    <button className="flex flex-col items-center gap-1.5 rounded-lg py-1.5 text-center active:bg-muted/40">
+    <button onClick={onClick} className="flex flex-col items-center gap-1.5 rounded-lg py-1.5 text-center active:bg-muted/40">
       <div className={cn("flex h-9 w-9 items-center justify-center rounded-xl", tone)}>
         <Icon className="h-4 w-4" />
       </div>
