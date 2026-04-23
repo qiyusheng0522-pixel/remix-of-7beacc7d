@@ -20,6 +20,7 @@ import { Card, MiniStat, QuickAction } from "./SecretaryWorkbench";
 import { BarChart, ChartCard, HBarRow, LineChart, StatTile } from "@/components/WorkStats";
 import { PatientChatSheet } from "@/components/PatientChatSheet";
 import { PatientArchiveSheet } from "@/components/PatientArchiveSheet";
+import { RehabRecordSheet } from "@/components/RehabRecordSheet";
 import { ActionSheet, ToastBanner } from "@/components/ActionSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
