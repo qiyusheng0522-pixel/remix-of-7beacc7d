@@ -4,41 +4,51 @@ import {
   ClipboardCheck,
   AlertTriangle,
   Send,
-  Sparkles,
   Clock,
   Home,
   FileText,
   User,
   ChevronRight,
   CheckCircle2,
-  MessageCircle,
-  FileSearch,
+  ArrowLeft,
+  Edit3,
+  Save,
+  Sparkles,
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { Card, MiniStat, QuickAction, SearchBar } from "./SecretaryWorkbench";
-import { PatientChatSheet } from "@/components/PatientChatSheet";
-import { PatientArchiveSheet } from "@/components/PatientArchiveSheet";
-import { ActionSheet, ToastBanner } from "@/components/ActionSheet";
+import { ToastBanner } from "@/components/ActionSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type TabKey = "home" | "scales" | "history" | "me";
-type Overlay = { kind: "chat"; patient: Patient } | { kind: "archive"; patient: Patient } | null;
+
+interface ScaleField {
+  label: string;
+  value: string;
+  abnormal: boolean;
+}
 
 export function DoctorOnDutyWorkbench() {
   const [tab, setTab] = useState<TabKey>("home");
-  const [overlay, setOverlay] = useState<Overlay>(null);
-  const [actionPatient, setActionPatient] = useState<Patient | null>(null);
+  const [editor, setEditor] = useState<Patient | null>(null);
+  const [pushed, setPushed] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<string | null>(null);
 
-  const tomorrowSurgery = patients.filter((p) => p.status === "admitted" && p.preOpFindings);
+  const todaySurgery = patients.filter((p) => p.status === "admitted" && p.preOpFindings);
   const tasks = todayTasks["doctor-on-duty"];
-  const abnormalCount = tomorrowSurgery.filter((p) => p.preOpAbnormal).length;
+  const abnormalCount = todaySurgery.filter((p) => p.preOpAbnormal).length;
+  const pendingPush = todaySurgery.filter((p) => !pushed.has(p.id)).length;
 
   const showToast = (t: string) => {
     setToast(t);
     setTimeout(() => setToast(null), 1800);
+  };
+
+  const handlePush = (p: Patient) => {
+    setPushed((s) => new Set(s).add(p.id));
+    showToast(`已推送至 王主任团队 + 朱治疗师 → ${p.name}`);
   };
 
   return (
@@ -51,7 +61,7 @@ export function DoctorOnDutyWorkbench() {
           onChange={(k) => setTab(k as TabKey)}
           items={[
             { key: "home", label: "首页", icon: Home, badge: tasks.length },
-            { key: "scales", label: "术前量表", icon: ClipboardCheck, badge: tomorrowSurgery.length },
+            { key: "scales", label: "术前量表", icon: ClipboardCheck, badge: pendingPush },
             { key: "history", label: "历史", icon: FileText },
             { key: "me", label: "我的", icon: User },
           ]}
@@ -61,39 +71,35 @@ export function DoctorOnDutyWorkbench() {
       {tab === "home" && (
         <HomeTab
           tasks={tasks}
-          surgeryCount={tomorrowSurgery.length}
+          surgeryCount={todaySurgery.length}
           abnormalCount={abnormalCount}
-          onQuick={(l) => showToast(`已打开 ${l}`)}
+          pendingPush={pendingPush}
+          onOpenScales={() => setTab("scales")}
+          onOcr={() => showToast("启动 OCR 摄像头...")}
         />
       )}
       {tab === "scales" && (
         <ScalesTab
-          list={tomorrowSurgery}
-          onSelect={(p) => setActionPatient(p)}
-          onPush={(p) => showToast(`已推送至王主任团队 → ${p.name}`)}
-          onReOcr={() => showToast("启动 OCR 摄像头...")}
+          list={todaySurgery}
+          pushed={pushed}
+          onEdit={(p) => setEditor(p)}
+          onPush={handlePush}
+          onOcr={() => showToast("启动 OCR 摄像头...")}
         />
       )}
       {tab === "history" && <HistoryTab />}
       {tab === "me" && <MeTab />}
 
-      {overlay?.kind === "chat" && (
-        <PatientChatSheet patient={overlay.patient} onClose={() => setOverlay(null)} selfRole="医" />
+      {editor && (
+        <ScaleEditor
+          patient={editor}
+          onClose={() => setEditor(null)}
+          onSave={() => {
+            showToast(`已保存 ${editor.name} 的术前量表`);
+            setEditor(null);
+          }}
+        />
       )}
-      {overlay?.kind === "archive" && (
-        <PatientArchiveSheet patient={overlay.patient} onClose={() => setOverlay(null)} />
-      )}
-      <ActionSheet
-        open={!!actionPatient}
-        title={actionPatient ? `${actionPatient.name} · ${actionPatient.bedNo}床` : ""}
-        onClose={() => setActionPatient(null)}
-        actions={[
-          { label: "在线沟通", tone: "primary", onClick: () => actionPatient && setOverlay({ kind: "chat", patient: actionPatient }) },
-          { label: "查看患者档案", onClick: () => actionPatient && setOverlay({ kind: "archive", patient: actionPatient }) },
-          { label: "重新 OCR 录入", onClick: () => showToast("启动 OCR 摄像头...") },
-          { label: "推送至手术团队", tone: "primary", onClick: () => actionPatient && showToast(`已推送 → ${actionPatient.name}`) },
-        ]}
-      />
       {toast && <ToastBanner text={toast} />}
     </PhoneShell>
   );
@@ -103,12 +109,16 @@ function HomeTab({
   tasks,
   surgeryCount,
   abnormalCount,
-  onQuick,
+  pendingPush,
+  onOpenScales,
+  onOcr,
 }: {
   tasks: typeof todayTasks["doctor-on-duty"];
   surgeryCount: number;
   abnormalCount: number;
-  onQuick: (l: string) => void;
+  pendingPush: number;
+  onOpenScales: () => void;
+  onOcr: () => void;
 }) {
   return (
     <div className="space-y-3 p-3">
@@ -120,21 +130,33 @@ function HomeTab({
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
           <MiniStat label="待录入量表" value={surgeryCount} />
-          <MiniStat label="异常指标" value={abnormalCount} />
+          <MiniStat label="待推送" value={pendingPush} />
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-2 rounded-2xl border bg-card p-3">
-        <QuickAction icon={Camera} label="OCR 录入" tone="bg-primary/15 text-primary" onClick={() => onQuick("OCR 录入")} />
-        <QuickAction icon={Sparkles} label="AI 异常分析" tone="bg-info/15 text-info" onClick={() => onQuick("AI 异常分析")} />
-        <QuickAction icon={Send} label="推送团队" tone="bg-success/15 text-success" onClick={() => onQuick("推送团队")} />
-        <QuickAction icon={AlertTriangle} label="预警中心" tone="bg-destructive/10 text-destructive" onClick={() => onQuick("预警中心")} />
+      <button
+        onClick={onOcr}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-medium text-primary-foreground active:opacity-90"
+        style={{ background: "var(--gradient-primary)" }}
+      >
+        <Camera className="h-5 w-5" />
+        OCR 录入新量表
+      </button>
+
+      <div className="grid grid-cols-3 gap-2 rounded-2xl border bg-card p-3">
+        <QuickAction icon={ClipboardCheck} label="术前量表" tone="bg-info/15 text-info" onClick={onOpenScales} />
+        <QuickAction icon={Edit3} label="手工编辑" tone="bg-primary/15 text-primary" onClick={onOpenScales} />
+        <QuickAction icon={Send} label="推送团队" tone="bg-success/15 text-success" onClick={onOpenScales} />
       </div>
 
       <Card title="今日待办" rightLabel={`${tasks.length} 项`}>
         <div className="divide-y">
           {tasks.map((t) => (
-            <button key={t.id} className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left active:bg-muted/40">
+            <button
+              key={t.id}
+              onClick={onOpenScales}
+              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left active:bg-muted/40"
+            >
               <div
                 className={cn(
                   "flex h-7 w-7 items-center justify-center rounded-md",
@@ -161,33 +183,36 @@ function HomeTab({
 
 function ScalesTab({
   list,
-  onSelect,
+  pushed,
+  onEdit,
   onPush,
-  onReOcr,
+  onOcr,
 }: {
   list: typeof patients;
-  onSelect: (p: Patient) => void;
+  pushed: Set<string>;
+  onEdit: (p: Patient) => void;
   onPush: (p: Patient) => void;
-  onReOcr: () => void;
+  onOcr: () => void;
 }) {
   return (
     <div className="space-y-3 p-3">
       <SearchBar placeholder="搜索患者 / 床号" />
 
       <button
-        onClick={onReOcr}
+        onClick={onOcr}
         className="flex w-full items-center justify-center gap-2 rounded-full py-2.5 text-sm font-medium text-primary-foreground active:opacity-90"
         style={{ background: "var(--gradient-primary)" }}
       >
         <Camera className="h-4 w-4" />
-        OCR 录入新量表
+        OCR 录入 / 拍照识别
       </button>
 
       <div className="text-xs font-semibold">明日手术 · {list.length} 例</div>
 
-      {list.map((p) => (
-        <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
-          <button onClick={() => onSelect(p)} className="block w-full text-left">
+      {list.map((p) => {
+        const isPushed = pushed.has(p.id);
+        return (
+          <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
             <div className="flex items-start justify-between gap-2 border-b p-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
@@ -207,86 +232,220 @@ function ScalesTab({
                 </div>
                 <div className="text-[10px] text-muted-foreground">{p.director} · 手术 {p.surgeryDate}</div>
               </div>
-              <FileSearch className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
-          </button>
 
-          <div className="grid grid-cols-2 gap-2 p-3">
-            {p.preOpFindings?.map((f) => (
-              <div
-                key={f.label}
-                className={cn(
-                  "rounded-lg border p-2",
-                  f.abnormal ? "border-destructive/40 bg-destructive/5" : "border-border bg-muted/20",
-                )}
-              >
-                <div className="flex items-center justify-between text-[9px] text-muted-foreground">
-                  <span>{f.label}</span>
-                  {f.abnormal && <AlertTriangle className="h-2.5 w-2.5 text-destructive" />}
+            <div className="grid grid-cols-2 gap-2 p-3">
+              {p.preOpFindings?.map((f) => (
+                <div
+                  key={f.label}
+                  className={cn(
+                    "rounded-lg border p-2",
+                    f.abnormal ? "border-destructive/40 bg-destructive/5" : "border-border bg-muted/20",
+                  )}
+                >
+                  <div className="flex items-center justify-between text-[9px] text-muted-foreground">
+                    <span>{f.label}</span>
+                    {f.abnormal && <AlertTriangle className="h-2.5 w-2.5 text-destructive" />}
+                  </div>
+                  <div className={cn("mt-0.5 text-[12px] font-bold", f.abnormal ? "text-destructive" : "text-foreground")}>
+                    {f.value}
+                  </div>
                 </div>
-                <div className={cn("mt-0.5 text-[12px] font-bold", f.abnormal ? "text-destructive" : "text-foreground")}>
-                  {f.value}
-                </div>
+              ))}
+            </div>
+
+            {isPushed && (
+              <div className="mx-3 mb-2 flex items-center gap-1.5 rounded-md bg-success/10 p-2 text-[10px] text-success">
+                <CheckCircle2 className="h-3 w-3" />
+                已推送至 王主任团队 + 朱治疗师，等待确认
               </div>
-            ))}
-          </div>
-
-          <div
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-2 text-[10px]",
-              p.preOpAbnormal ? "bg-destructive/5 text-destructive" : "bg-success/5 text-success",
             )}
-          >
-            {p.preOpAbnormal ? <AlertTriangle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
-            {p.preOpAbnormal ? "等待手术团队评估是否如期手术" : "建议如期手术 · 已推送团队"}
-          </div>
 
-          <div className="grid grid-cols-3 gap-0 border-t">
-            <button onClick={onReOcr} className="flex items-center justify-center gap-1 py-2.5 text-[11px] text-foreground active:bg-muted/40">
-              <Camera className="h-3 w-3" />重OCR
-            </button>
-            <button onClick={() => onSelect(p)} className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] text-info active:bg-muted/40">
-              <MessageCircle className="h-3 w-3" />沟通
-            </button>
-            <button onClick={() => onPush(p)} className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] font-medium text-primary active:bg-muted/40">
-              <Send className="h-3 w-3" />推送
-            </button>
+            <div className="grid grid-cols-2 gap-0 border-t">
+              <button
+                onClick={() => onEdit(p)}
+                className="flex items-center justify-center gap-1 py-2.5 text-[11px] text-foreground active:bg-muted/40"
+              >
+                <Edit3 className="h-3 w-3" />编辑量表
+              </button>
+              <button
+                onClick={() => onPush(p)}
+                disabled={isPushed}
+                className={cn(
+                  "flex items-center justify-center gap-1 border-l py-2.5 text-[11px] font-medium active:opacity-90",
+                  isPushed ? "bg-muted text-muted-foreground" : "text-primary-foreground",
+                )}
+                style={!isPushed ? { background: "var(--gradient-primary)" } : undefined}
+              >
+                <Send className="h-3 w-3" />{isPushed ? "已推送" : "确认推送"}
+              </button>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
-function HistoryTab() {
+/* ---------- OCR 编辑器 ---------- */
+function ScaleEditor({ patient, onClose, onSave }: { patient: Patient; onClose: () => void; onSave: () => void }) {
+  const [fields, setFields] = useState<ScaleField[]>(
+    patient.preOpFindings?.map((f) => ({ ...f })) ?? [
+      { label: "血红蛋白", value: "", abnormal: false },
+      { label: "血压", value: "", abnormal: false },
+      { label: "心电图", value: "", abnormal: false },
+      { label: "凝血", value: "", abnormal: false },
+    ],
+  );
+
+  const update = (i: number, key: "value" | "label", v: string) => {
+    setFields((s) => s.map((f, idx) => (idx === i ? { ...f, [key]: v } : f)));
+  };
+
   return (
-    <div className="p-3">
-      <Card title="本周已录入量表" rightLabel="14 张">
-        <div className="space-y-0 divide-y">
-          {[
-            { d: "周一", n: 3, abn: 0 },
-            { d: "周二", n: 2, abn: 1 },
-            { d: "周三", n: 4, abn: 1 },
-            { d: "周四", n: 3, abn: 0 },
-            { d: "周五", n: 2, abn: 0 },
-          ].map((x) => (
-            <div key={x.d} className="flex items-center justify-between px-3 py-3">
-              <div>
-                <div className="text-[12px] font-medium">{x.d}</div>
-                <div className="text-[10px] text-muted-foreground">{x.n} 张量表</div>
+    <div className="absolute inset-0 z-50 flex flex-col bg-background">
+      <div className="flex items-center justify-between border-b bg-card px-3 py-2.5">
+        <button onClick={onClose} className="text-[12px] text-muted-foreground">
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="text-[13px] font-semibold">编辑术前量表 · {patient.name}</div>
+        <button onClick={onSave} className="flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-[11px] font-medium text-primary-foreground">
+          <Save className="h-3 w-3" />保存
+        </button>
+      </div>
+
+      <div className="flex-1 space-y-3 overflow-y-auto p-3">
+        <div className="rounded-2xl border bg-info/5 p-3 text-[11px] text-info">
+          <Sparkles className="mr-1 inline h-3 w-3" />
+          OCR 识别结果，请核对并补充。识别后的内容支持手工编辑。
+        </div>
+
+        <div className="rounded-2xl border bg-card p-3">
+          <div className="text-[10px] font-medium text-muted-foreground">{patient.bedNo}床 · {patient.diagnosis}</div>
+          <div className="text-[11px] font-semibold">{patient.surgeryName} · 主刀 {patient.director}</div>
+        </div>
+
+        <div className="space-y-2">
+          {fields.map((f, i) => (
+            <div
+              key={i}
+              className={cn(
+                "rounded-xl border p-3",
+                f.abnormal ? "border-destructive/40 bg-destructive/5" : "bg-card",
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <input
+                  value={f.label}
+                  onChange={(e) => update(i, "label", e.target.value)}
+                  className="bg-transparent text-[11px] font-medium text-muted-foreground outline-none"
+                />
+                <label className="flex items-center gap-1 text-[10px] text-destructive">
+                  <input
+                    type="checkbox"
+                    checked={f.abnormal}
+                    onChange={(e) => setFields((s) => s.map((ff, idx) => (idx === i ? { ...ff, abnormal: e.target.checked } : ff)))}
+                  />
+                  标记异常
+                </label>
               </div>
-              <div className="flex items-center gap-1">
-                {x.abn > 0 && (
-                  <span className="rounded-full bg-destructive/15 px-1.5 py-0.5 text-[9px] text-destructive">
-                    异常 {x.abn}
-                  </span>
-                )}
-                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-              </div>
+              <input
+                value={f.value}
+                onChange={(e) => update(i, "value", e.target.value)}
+                placeholder="输入数值..."
+                className="mt-1 w-full bg-transparent text-[14px] font-bold outline-none"
+              />
             </div>
           ))}
         </div>
-      </Card>
+
+        <button
+          onClick={() => setFields((s) => [...s, { label: "新指标", value: "", abnormal: false }])}
+          className="w-full rounded-xl border border-dashed py-2 text-[11px] text-muted-foreground"
+        >
+          + 添加指标
+        </button>
+      </div>
+
+      <div className="border-t bg-card px-3 py-2 text-center text-[10px] text-muted-foreground">
+        保存后请回到列表点击「确认推送」发送至 王主任团队 + 朱治疗师
+      </div>
+    </div>
+  );
+}
+
+/* ---------- 历史按日期 ---------- */
+function HistoryTab() {
+  const history = [
+    {
+      date: "2024-04-22",
+      day: "今日",
+      records: [
+        { bed: "01", name: "刘德海", surgery: "右 THA", abnormal: 2 },
+        { bed: "02", name: "吴翠花", surgery: "左 TKA 翻修", abnormal: 0 },
+      ],
+    },
+    {
+      date: "2024-04-21",
+      day: "昨日",
+      records: [
+        { bed: "03", name: "孙顺英", surgery: "右 TKA", abnormal: 0 },
+      ],
+    },
+    {
+      date: "2024-04-20",
+      day: "周六",
+      records: [
+        { bed: "07", name: "李文广", surgery: "左 THA", abnormal: 1 },
+        { bed: "09", name: "邹建", surgery: "右肩关节镜", abnormal: 0 },
+      ],
+    },
+    {
+      date: "2024-04-19",
+      day: "周五",
+      records: [
+        { bed: "05", name: "杨成轩", surgery: "右 THA", abnormal: 0 },
+        { bed: "11", name: "高桂兰", surgery: "左 TKA", abnormal: 1 },
+        { bed: "13", name: "黄玉萍", surgery: "右 UKA", abnormal: 0 },
+      ],
+    },
+  ];
+
+  return (
+    <div className="space-y-3 p-3">
+      <SearchBar placeholder="搜索日期 / 患者" />
+      {history.map((d) => (
+        <div key={d.date} className="overflow-hidden rounded-2xl border bg-card">
+          <div className="flex items-center justify-between border-b bg-muted/30 px-3 py-2">
+            <div>
+              <div className="text-[12px] font-semibold">{d.date}</div>
+              <div className="text-[9px] text-muted-foreground">{d.day} · {d.records.length} 张量表</div>
+            </div>
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+              {d.records.reduce((s, r) => s + r.abnormal, 0)} 异常
+            </span>
+          </div>
+          <div className="divide-y">
+            {d.records.map((r) => (
+              <button key={r.bed + r.name} className="flex w-full items-center justify-between px-3 py-2.5 text-left active:bg-muted/40">
+                <div className="flex items-center gap-1.5">
+                  <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">{r.bed}床</span>
+                  <span className="text-[12px] font-medium">{r.name}</span>
+                  <span className="text-[10px] text-muted-foreground">· {r.surgery}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {r.abnormal > 0 && (
+                    <span className="rounded-full bg-destructive/15 px-1.5 py-0.5 text-[9px] text-destructive">
+                      异常 {r.abnormal}
+                    </span>
+                  )}
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
