@@ -114,9 +114,11 @@ export function TherapistWorkbench() {
       )}
       {tab === "records" && (
         <RecordsTab
-          list={myPatients}
+          inpatientList={inpatientList}
+          outpatientList={outpatientList}
           onSelect={(p) => setActionPatient(p)}
           onAssess={(p) => showToast(`正在为 ${p.name} 进行康复评估...`)}
+          onAddRecord={(p) => setRecordFor(p)}
           onDischarge={(p) => showToast(`已发起康复出院评估：${p.name}`)}
         />
       )}
@@ -133,6 +135,16 @@ export function TherapistWorkbench() {
           }}
         />
       )}
+      {recordFor && (
+        <RehabRecordSheet
+          patient={recordFor}
+          onClose={() => setRecordFor(null)}
+          onSave={() => {
+            showToast(`已保存院内康复记录：${recordFor.name}`);
+            setRecordFor(null);
+          }}
+        />
+      )}
       {overlay?.kind === "chat" && (
         <PatientChatSheet patient={overlay.patient} onClose={() => setOverlay(null)} selfRole="治" />
       )}
@@ -141,12 +153,20 @@ export function TherapistWorkbench() {
       )}
       <ActionSheet
         open={!!actionPatient}
-        title={actionPatient ? `${actionPatient.name} · ${actionPatient.bedNo}床` : ""}
+        title={actionPatient ? `${actionPatient.name}${actionPatient.bedNo ? ` · ${actionPatient.bedNo}床` : " · 门诊"}` : ""}
         onClose={() => setActionPatient(null)}
         actions={[
           { label: "在线沟通", tone: "primary", onClick: () => actionPatient && setOverlay({ kind: "chat", patient: actionPatient }) },
           { label: "查看患者档案", onClick: () => actionPatient && setOverlay({ kind: "archive", patient: actionPatient }) },
-          { label: "新增院内治疗记录", onClick: () => showToast("打开记录单") },
+          {
+            label: "新增院内治疗记录",
+            onClick: () => {
+              if (actionPatient) {
+                setRecordFor(actionPatient);
+                setActionPatient(null);
+              }
+            },
+          },
           { label: "发起康复评估", onClick: () => showToast("已发起评估") },
         ]}
       />
