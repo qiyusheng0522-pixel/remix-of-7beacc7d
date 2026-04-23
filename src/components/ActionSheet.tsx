@@ -20,7 +20,7 @@ export function ActionSheet({
 
   if (!open) return null;
   return (
-    <div className="absolute inset-0 z-40 flex items-end bg-foreground/30" onClick={onClose}>
+    <div className="absolute inset-0 z-50 flex items-end bg-foreground/40" onClick={onClose}>
       <div
         className="w-full overflow-hidden rounded-t-2xl bg-card pb-2 animate-in slide-in-from-bottom"
         onClick={(e) => e.stopPropagation()}

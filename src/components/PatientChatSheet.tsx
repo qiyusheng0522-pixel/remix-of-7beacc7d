@@ -49,7 +49,7 @@ export function PatientChatSheet({ patient, onClose, selfRole = "护士" }: { pa
   if (archiveOpen) return <PatientArchiveSheet patient={patient} onClose={() => setArchiveOpen(false)} />;
 
   return (
-    <div className="absolute inset-0 z-30 flex flex-col bg-muted/40">
+    <div className="absolute inset-0 z-50 flex flex-col bg-background">
       {/* 顶部 */}
       <div className="flex items-center gap-2 border-b bg-card px-3 py-2.5">
         <button onClick={onClose}><ArrowLeft className="h-4 w-4" /></button>
@@ -62,6 +62,12 @@ export function PatientChatSheet({ patient, onClose, selfRole = "护士" }: { pa
             {patient.bedNo ? `${patient.bedNo}床 · ` : ""}{patient.diagnosis}
           </div>
         </div>
+        <button
+          onClick={() => alert(`正在拨打 ${patient.phone}`)}
+          className="flex items-center gap-1 rounded-full bg-success/15 px-2 py-1 text-[10px] font-medium text-success"
+        >
+          <Phone className="h-3 w-3" />电话
+        </button>
         <button
           onClick={() => setArchiveOpen(true)}
           className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary"

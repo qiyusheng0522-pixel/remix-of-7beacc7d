@@ -244,30 +244,27 @@ export const patients: Patient[] = [
 
 export const todayTasks: Record<string, TaskItem[]> = {
   secretary: [
-    { id: "t1", title: "门诊待入院电话确认", patientName: "张建国", priority: "high", type: "call", due: "今日 10:00" },
-    { id: "t2", title: "门诊待入院电话确认", patientName: "李秀兰", priority: "high", type: "call", due: "今日 11:00" },
-    { id: "t3", title: "推送入院前宣教材料", patientName: "陈志强", priority: "medium", type: "education", due: "今日 14:00" },
-    { id: "t4", title: "办理入院 + 床旁宣教", patientName: "刘德海", bedNo: "01", priority: "medium", type: "admission" },
+    { id: "t1", title: "待入院患者电话确认", patientName: "张建国", priority: "high", type: "call", due: "今日 10:00" },
+    { id: "t2", title: "待入院患者电话确认", patientName: "李秀兰", priority: "high", type: "call", due: "今日 11:00" },
+    { id: "t3", title: "入院前宣教推送", patientName: "陈志强", priority: "medium", type: "education", due: "今日 14:00" },
+    { id: "t4", title: "入院办理 + 床旁宣教", patientName: "刘德海", bedNo: "01", priority: "medium", type: "admission" },
     { id: "t5", title: "08:00 护理交班记录", priority: "high", type: "handover", due: "今日 08:00" },
-    { id: "t6", title: "床旁导管记录单填写", patientName: "杨成轩", bedNo: "05", priority: "medium", type: "nursing" },
+    { id: "t6", title: "DVT/血栓监测指标录入", patientName: "杨成轩", bedNo: "05", priority: "medium", type: "nursing" },
   ],
   "doctor-on-duty": [
     { id: "d1", title: "OCR 录入术前检查量表", patientName: "刘德海", bedNo: "01", priority: "high", type: "ocr", due: "今日 16:00" },
     { id: "d2", title: "OCR 录入术前检查量表", patientName: "吴翠花", bedNo: "02", priority: "high", type: "ocr", due: "今日 16:00" },
-    { id: "d3", title: "异常指标复核", patientName: "刘德海", bedNo: "01", priority: "high", type: "review" },
-    { id: "d4", title: "推送量表至王主任团队", priority: "medium", type: "push" },
   ],
   "surgical-team": [
-    { id: "s1", title: "术前评估·决定是否如期手术", patientName: "刘德海", bedNo: "01", priority: "high", type: "decision" },
-    { id: "s2", title: "术前评估·决定是否如期手术", patientName: "吴翠花", bedNo: "02", priority: "high", type: "decision" },
-    { id: "s3", title: "填写术中量表", patientName: "孙顺英", bedNo: "03", priority: "high", type: "intra-op", due: "术后即时" },
-    { id: "s4", title: "确认明日手术名单", priority: "medium", type: "schedule" },
+    { id: "s1", title: "今日手术患者确认", patientName: "刘德海", bedNo: "01", priority: "high", type: "decision" },
+    { id: "s2", title: "今日手术患者确认", patientName: "吴翠花", bedNo: "02", priority: "high", type: "decision" },
+    { id: "s3", title: "术中量表填写", patientName: "孙顺英", bedNo: "03", priority: "high", type: "intra-op", due: "术后即时" },
   ],
   therapist: [
-    { id: "th1", title: "确认 AI 康复方案", patientName: "孙顺英", bedNo: "03", priority: "high", type: "plan" },
-    { id: "th2", title: "术后第 3 日康复评估", patientName: "杨成轩", bedNo: "05", priority: "high", type: "assess" },
-    { id: "th3", title: "院内康复治疗记录", patientName: "胡国玉", bedNo: "08", priority: "medium", type: "record" },
-    { id: "th4", title: "康复出院评估", patientName: "胡国玉", bedNo: "08", priority: "medium", type: "discharge" },
+    { id: "th1", title: "AI 康复方案确认", patientName: "孙顺英", bedNo: "03", priority: "high", type: "plan" },
+    { id: "th2", title: "术前量表确认（是否如期手术）", patientName: "刘德海", bedNo: "01", priority: "high", type: "preop-confirm" },
+    { id: "th3", title: "术前量表确认（是否如期手术）", patientName: "吴翠花", bedNo: "02", priority: "high", type: "preop-confirm" },
+    { id: "th4", title: "康复出院评估咨询", patientName: "胡国玉", bedNo: "08", priority: "medium", type: "discharge" },
   ],
 };
 

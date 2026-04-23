@@ -192,6 +192,8 @@ function HomeTab({
                 />
                 <div className="text-[12px] font-medium">{t.title}</div>
                 {t.type === "plan" && <Sparkles className="h-3 w-3 text-info" />}
+                {t.type === "preop-confirm" && <ClipboardCheck className="h-3 w-3 text-warning-foreground" />}
+                {t.type === "discharge" && <CheckCircle2 className="h-3 w-3 text-success" />}
               </div>
               <div className="ml-3.5 mt-0.5 text-[10px] text-muted-foreground">
                 {t.patientName && `${t.patientName}${t.bedNo ? ` · ${t.bedNo}床` : ""}`}
