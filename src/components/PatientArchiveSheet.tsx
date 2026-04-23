@@ -93,7 +93,7 @@ export function PatientArchiveSheet({ patient, onClose }: { patient: Patient; on
 
 export function Sheet({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title: string }) {
   return (
-    <div className="absolute inset-0 z-30 flex flex-col bg-muted/30">
+    <div className="absolute inset-0 z-50 flex flex-col bg-background">
       <div className="flex items-center justify-between border-b bg-card px-3 py-2.5">
         <button onClick={onClose} className="text-[11px] text-muted-foreground active:text-foreground">
           <X className="h-4 w-4" />

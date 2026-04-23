@@ -49,7 +49,7 @@ export function PatientChatSheet({ patient, onClose, selfRole = "护士" }: { pa
   if (archiveOpen) return <PatientArchiveSheet patient={patient} onClose={() => setArchiveOpen(false)} />;
 
   return (
-    <div className="absolute inset-0 z-30 flex flex-col bg-muted/40">
+    <div className="absolute inset-0 z-50 flex flex-col bg-background">
       {/* 顶部 */}
       <div className="flex items-center gap-2 border-b bg-card px-3 py-2.5">
         <button onClick={onClose}><ArrowLeft className="h-4 w-4" /></button>
