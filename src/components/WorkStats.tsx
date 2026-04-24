@@ -49,7 +49,7 @@ export function BarChart({
 export function LineChart({
   data,
   height = 120,
-  stroke = "hsl(var(--primary))",
+  stroke = "var(--primary)",
 }: {
   data: BarSeries[];
   height?: number;
@@ -101,7 +101,7 @@ export function LineChart({
 export function DonutChart({
   value,
   label,
-  color = "hsl(var(--primary))",
+  color = "var(--primary)",
   size = 80,
 }: {
   value: number;
@@ -114,25 +114,27 @@ export function DonutChart({
   const offset = c - (value / 100) * c;
   return (
     <div className="flex flex-col items-center gap-1">
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} stroke="hsl(var(--muted))" strokeWidth="6" fill="none" />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke={color}
-          strokeWidth="6"
-          fill="none"
-          strokeDasharray={c}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          className="transition-all"
-        />
-      </svg>
-      <div className="-mt-[55px] text-center">
-        <div className="text-sm font-bold text-foreground">{value}%</div>
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="-rotate-90">
+          <circle cx={size / 2} cy={size / 2} r={r} stroke="var(--muted)" strokeWidth="6" fill="none" />
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            stroke={color}
+            strokeWidth="6"
+            fill="none"
+            strokeDasharray={c}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            className="transition-all"
+          />
+        </svg>
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="text-sm font-bold text-foreground">{value}%</div>
+        </div>
       </div>
-      <div className="mt-[20px] text-[10px] text-muted-foreground">{label}</div>
+      <div className="text-[10px] text-muted-foreground">{label}</div>
     </div>
   );
 }
