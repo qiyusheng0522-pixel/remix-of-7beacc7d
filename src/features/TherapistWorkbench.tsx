@@ -169,6 +169,8 @@ export function TherapistWorkbench() {
         <PatientArchiveSheet
           patient={overlay.patient}
           onClose={() => setOverlay(null)}
+          selfRole="治疗师"
+          selfName="朱年鑫"
         />
       )}
       {overlay?.kind === "patient-list" && (

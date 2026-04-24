@@ -139,7 +139,7 @@ export function SecretaryWorkbench() {
         <PatientChatSheet patient={overlay.patient} onClose={() => setOverlay(null)} selfRole="护士" />
       )}
       {overlay?.kind === "archive" && (
-        <PatientArchiveSheet patient={overlay.patient} onClose={() => setOverlay(null)} />
+        <PatientArchiveSheet patient={overlay.patient} onClose={() => setOverlay(null)} selfRole="护士" selfName="张护士长" />
       )}
       {overlay?.kind === "vitals" && (
         <VitalsSheet patient={overlay.patient} onClose={() => setOverlay(null)} onSave={(t) => { showToast(t); setOverlay(null); }} />
