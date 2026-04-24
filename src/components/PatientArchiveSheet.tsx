@@ -250,3 +250,51 @@ function SectionTitle({ icon: Icon, text, tone }: { icon: React.ElementType; tex
     </div>
   );
 }
+
+function NoteAdder({
+  onCancel,
+  onSave,
+}: {
+  onCancel: () => void;
+  onSave: (text: string, category: PatientNote["category"]) => void;
+}) {
+  const [text, setText] = useState("");
+  const [cat, setCat] = useState<PatientNote["category"]>("通用");
+  return (
+    <div className="rounded-xl border bg-info/5 p-2.5">
+      <div className="mb-1.5 flex flex-wrap gap-1">
+        {(["通用", "出院备注", "康复重点", "护理交班"] as const).map((c) => (
+          <button
+            key={c}
+            onClick={() => setCat(c)}
+            className={`rounded-full px-2 py-0.5 text-[10px] ${
+              cat === c ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"
+            }`}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+      <textarea
+        rows={3}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="请输入备注内容（其他角色均可见）..."
+        className="w-full rounded-lg border bg-card p-2 text-[11px] outline-none focus:border-primary"
+      />
+      <div className="mt-1.5 flex justify-end gap-1.5">
+        <button onClick={onCancel} className="rounded-full px-3 py-1 text-[11px] text-muted-foreground">
+          取消
+        </button>
+        <button
+          disabled={!text.trim()}
+          onClick={() => onSave(text.trim(), cat)}
+          className="flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-[11px] font-medium text-primary-foreground disabled:opacity-40"
+        >
+          <Save className="h-3 w-3" />保存
+        </button>
+      </div>
+    </div>
+  );
+}
+
