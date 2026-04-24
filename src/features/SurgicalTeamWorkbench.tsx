@@ -14,9 +14,12 @@ import {
   Send,
   RotateCcw,
   MessageCircle,
+  CalendarDays,
+  Activity,
+  ChevronRight,
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
-import { Card, MiniStat, QuickAction } from "./SecretaryWorkbench";
+import { Card } from "./SecretaryWorkbench";
 import { BarChart, ChartCard, DonutChart, StatTile } from "@/components/WorkStats";
 import { ToastBanner } from "@/components/ActionSheet";
 import { PatientChatSheet } from "@/components/PatientChatSheet";
