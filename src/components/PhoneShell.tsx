@@ -97,8 +97,11 @@ export function TabBar({
   activeKey: string;
   onChange: (k: string) => void;
 }) {
+  const cols = items.length;
+  const gridClass =
+    cols === 5 ? "grid-cols-5" : cols === 4 ? "grid-cols-4" : cols === 3 ? "grid-cols-3" : "grid-cols-2";
   return (
-    <nav className="grid grid-cols-4 px-2 pt-1.5 pb-1">
+    <nav className={cn("grid px-1.5 pt-1.5 pb-1", gridClass)}>
       {items.map((it) => {
         const Icon = it.icon;
         const active = it.key === activeKey;
@@ -107,7 +110,7 @@ export function TabBar({
             key={it.key}
             onClick={() => onChange(it.key)}
             className={cn(
-              "relative flex flex-col items-center gap-0.5 rounded-md py-1 text-[10px] transition-colors",
+              "relative flex min-w-0 flex-col items-center gap-0.5 rounded-md px-0.5 py-1 transition-colors",
               active ? "text-primary" : "text-muted-foreground",
             )}
           >
@@ -119,7 +122,9 @@ export function TabBar({
                 </span>
               ) : null}
             </div>
-            <span>{it.label}</span>
+            <span className={cn("whitespace-nowrap leading-none", cols >= 5 ? "text-[9px]" : "text-[10px]")}>
+              {it.label}
+            </span>
           </button>
         );
       })}
