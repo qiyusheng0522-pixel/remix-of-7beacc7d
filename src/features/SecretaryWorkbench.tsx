@@ -90,12 +90,14 @@ export function SecretaryWorkbench() {
             if (key === "handover") setOverlay({ kind: "handover" });
             else if (key === "education") setOverlay({ kind: "education", candidates: [...pendingAdmission, ...inpatientPatients] });
             else if (key === "ocr") showToast("OCR 识别：化验单 / 入院单 / 电子病历");
-            else if (key === "vitals") {
-              const target = inpatientPatients[0];
-              if (target) setOverlay({ kind: "vitals", patient: target });
+          else if (key === "vitals") {
+              // 跳转到住院列表录入指标，无患者则不跳
+              if (inpatientPatients.length > 0) setTab("inpatient");
             }
           }}
           onTask={handleTaskClick}
+          onJumpOutpatient={() => setTab("outpatient")}
+          onJumpInpatient={() => setTab("inpatient")}
         />
       )}
       {tab === "outpatient" && (
