@@ -33,14 +33,14 @@ import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type TabKey = "home" | "plans" | "records" | "me";
+type TabKey = "home" | "surg-confirm" | "plans" | "records" | "me";
 type Overlay =
   | { kind: "chat"; patient: Patient }
   | { kind: "archive"; patient: Patient }
   | { kind: "patient-list" }
-  | { kind: "surg-confirm" }
   | { kind: "discharge"; patient: Patient }
   | null;
+type SurgDecision = "go" | "hold" | "return";
 
 // AI 生成的康复方案（模拟）
 const aiRehabPlan = (patient: Patient) => ({
