@@ -86,7 +86,23 @@ export function SurgicalTeamWorkbench() {
           onOpen={(p) => setIntraOpFor(p)}
         />
       )}
+      {tab === "chat" && (
+        <ChatListTab list={myPatients} onOpen={(p) => setChatPatient(p)} onOpenAll={() => setShowPatientList(true)} />
+      )}
       {tab === "me" && <MeTab />}
+
+      {chatPatient && (
+        <PatientChatSheet patient={chatPatient} onClose={() => setChatPatient(null)} selfRole="主刀" />
+      )}
+      {showPatientList && (
+        <PatientListSheet
+          inpatientList={myPatients.filter((p) => p.department === "inpatient")}
+          outpatientList={myPatients.filter((p) => p.department === "outpatient")}
+          onClose={() => setShowPatientList(false)}
+          onArchive={(p) => { setShowPatientList(false); setChatPatient(p); }}
+          onChat={(p) => { setShowPatientList(false); setChatPatient(p); }}
+        />
+      )}
 
       {reasonFor && (
         <ReasonSheet
