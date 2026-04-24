@@ -126,6 +126,12 @@ export function SecretaryWorkbench() {
           onBatchEducation={() => setOverlay({ kind: "education", candidates: inpatientPatients })}
         />
       )}
+      {tab === "followup" && (
+        <FollowUpTab
+          list={followUpPatients}
+          onOpen={() => setOverlay({ kind: "followup", candidates: followUpPatients })}
+        />
+      )}
       {tab === "me" && <MeTab name="张护士长" role="科室秘书 / 责任护士" />}
 
       {overlay?.kind === "chat" && (
@@ -144,6 +150,16 @@ export function SecretaryWorkbench() {
           lockSinglePatient={overlay.lockSinglePatient}
           onClose={() => setOverlay(null)}
           onPush={showToast}
+        />
+      )}
+      {overlay?.kind === "followup" && (
+        <FollowUpSheet
+          candidates={overlay.candidates}
+          onClose={() => setOverlay(null)}
+          onPushTo={(msg) => {
+            showToast(msg);
+            setOverlay(null);
+          }}
         />
       )}
 
