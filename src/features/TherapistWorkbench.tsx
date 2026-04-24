@@ -202,6 +202,7 @@ export function TherapistWorkbench() {
           }}
         />
       )}
+      {overlay?.kind === "patient-list" && (
         <PatientListSheet
           inpatientList={inpatientList}
           outpatientList={outpatientList}
