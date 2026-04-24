@@ -23,7 +23,7 @@ export function PatientChatSheet({
   selfRole?: string;
 }) {
   const [archiveOpen, setArchiveOpen] = useState(false);
-  const [eduOpen, setEduOpen] = useState(false);
+  const [picker, setPicker] = useState<null | "edu" | "package">(null);
   const [aiHosting, setAiHosting] = useState(true); // 默认开启 AI 托管
   const [messages, setMessages] = useState<Msg[]>([
     { id: "m1", from: "patient", text: `您好，我是 ${patient.name}，有几个问题想咨询`, time: "09:21" },
@@ -89,16 +89,15 @@ export function PatientChatSheet({
   };
 
   if (archiveOpen) return <PatientArchiveSheet patient={patient} onClose={() => setArchiveOpen(false)} />;
-  if (eduOpen)
-    return (
-      <EducationPushSheet
-        candidates={[patient]}
-        onClose={() => setEduOpen(false)}
-        onPush={(t) => {
-          setMessages((m) => [...m, { id: `e${Date.now()}`, from: "self", text: `📘 ${t}`, time: now() }]);
-        }}
-      />
-    );
+
+  const sendQuickItem = (kind: "edu" | "package", title: string, desc: string) => {
+    const prefix = kind === "edu" ? "📘 已发送宣教" : "🎁 已发送服务包";
+    setMessages((m) => [
+      ...m,
+      { id: `q${Date.now()}`, from: "self", text: `${prefix}：${title}\n${desc}`, time: now() },
+    ]);
+    setPicker(null);
+  };
 
   return (
     <div className="absolute inset-0 z-50 flex flex-col bg-background">
