@@ -181,7 +181,27 @@ export function TherapistWorkbench() {
           selfName="朱年鑫"
         />
       )}
-      {overlay?.kind === "patient-list" && (
+      {overlay?.kind === "surg-confirm" && (
+        <SurgConfirmSheet
+          list={tomorrowSurgery}
+          confirms={surgConfirms}
+          onClose={() => setOverlay(null)}
+          onAck={(p) => {
+            setSurgConfirms((s) => ({ ...s, [p.id]: "ack" }));
+            showToast(`已确认收到术前量表：${p.name}`);
+          }}
+        />
+      )}
+      {overlay?.kind === "discharge" && (
+        <DischargeSheet
+          patient={overlay.patient}
+          onClose={() => setOverlay(null)}
+          onConfirm={(note) => {
+            showToast(`已确认 ${overlay.patient.name} 出院 · 备注已同步`);
+            setOverlay(null);
+          }}
+        />
+      )}
         <PatientListSheet
           inpatientList={inpatientList}
           outpatientList={outpatientList}
@@ -221,9 +241,11 @@ function HomeTab({
   planPendingCount,
   assessPendingCount,
   chatPendingCount,
+  surgConfirmPending,
   onOpenPatients,
   onOpenPlans,
   onOpenRecords,
+  onOpenSurgConfirm,
   onQuick,
 }: {
   tasks: typeof todayTasks.therapist;
@@ -232,12 +254,13 @@ function HomeTab({
   planPendingCount: number;
   assessPendingCount: number;
   chatPendingCount: number;
+  surgConfirmPending: number;
   onOpenPatients: () => void;
   onOpenPlans: () => void;
   onOpenRecords: () => void;
+  onOpenSurgConfirm: () => void;
   onQuick: (l: string) => void;
 }) {
-  const totalPatients = inpatientCount + outpatientCount;
   return (
     <div className="space-y-3 p-3">
       <div className="rounded-2xl p-4 text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
@@ -248,13 +271,13 @@ function HomeTab({
         </div>
       </div>
 
-      {/* 4 个工作台统计入口 */}
+      {/* 工作台统计入口 */}
       <div className="grid grid-cols-2 gap-2">
         <StatEntry
           icon={Users}
           label="患者管理"
           sub={`住院 ${inpatientCount} · 门诊 ${outpatientCount}`}
-          value={totalPatients}
+          value={inpatientCount + outpatientCount}
           tone="bg-info/10 text-info"
           onClick={onOpenPatients}
         />
@@ -284,6 +307,23 @@ function HomeTab({
           badge={chatPendingCount > 0}
           tone="bg-success/15 text-success"
           onClick={onOpenPatients}
+        />
+        <StatEntry
+          icon={Calendar}
+          label="手术确认"
+          sub={surgConfirmPending > 0 ? `${surgConfirmPending} 例待治疗师确认` : "全部已确认"}
+          value={surgConfirmPending}
+          badge={surgConfirmPending > 0}
+          tone="bg-warning/15 text-warning-foreground"
+          onClick={onOpenSurgConfirm}
+        />
+        <StatEntry
+          icon={Sparkles}
+          label="今日待办"
+          sub={`${tasks.length} 项任务`}
+          value={tasks.length}
+          tone="bg-info/10 text-info"
+          onClick={onOpenRecords}
         />
       </div>
 
