@@ -424,7 +424,97 @@ function InpatientTab({ list, onSelect, onBatchEducation }: { list: typeof patie
   );
 }
 
-function MeTab({ name, role }: { name: string; role: string }) {
+function FollowUpTab({ list, onOpen }: { list: typeof patients; onOpen: () => void }) {
+  const pending = list.filter((p) => p.followUpStatus !== "done");
+  const done = list.filter((p) => p.followUpStatus === "done");
+  const needSecond = list.filter((p) => p.followUpStatus === "needs-second");
+
+  return (
+    <div className="space-y-3 p-3">
+      <div
+        className="relative overflow-hidden rounded-2xl p-4 text-primary-foreground"
+        style={{ background: "var(--gradient-primary)" }}
+      >
+        <div className="flex items-center gap-1.5 text-[10px] opacity-90">
+          <HeartPulse className="h-3 w-3" />
+          术后随访清单
+        </div>
+        <div className="mt-1 text-base font-bold">
+          待随访 {pending.length} 人 · 需复访 {needSecond.length} 人
+        </div>
+        <div className="mt-0.5 text-[10px] opacity-80">
+          AI 多轮对话自动随访 · 异常自动推荐处理人
+        </div>
+        <button
+          onClick={onOpen}
+          className="mt-3 flex items-center gap-1 rounded-full bg-white/20 px-3 py-1.5 text-[11px] font-medium backdrop-blur active:bg-white/30"
+        >
+          <Sparkles className="h-3 w-3" />
+          打开 AI 随访清单
+        </button>
+      </div>
+
+      <Card title="随访进度" rightLabel={`共 ${list.length} 例`}>
+        <div className="grid grid-cols-3 gap-2 p-3">
+          <MiniBlock label="待随访" value={pending.length - needSecond.length} tone="text-info" />
+          <MiniBlock label="需复访" value={needSecond.length} tone="text-warning-foreground" />
+          <MiniBlock label="已完成" value={done.length} tone="text-success" />
+        </div>
+      </Card>
+
+      <Card title="随访患者" rightLabel="按术后天数">
+        <div className="divide-y">
+          {list.map((p) => (
+            <button
+              key={p.id}
+              onClick={onOpen}
+              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left active:bg-muted/40"
+            >
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary">
+                {p.name.slice(0, 1)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[12px] font-medium">{p.name}</span>
+                  {p.followUpStatus === "needs-second" && (
+                    <span className="rounded-full bg-warning/20 px-1.5 py-0.5 text-[9px] text-warning-foreground">
+                      需复访
+                    </span>
+                  )}
+                  {p.followUpStatus === "done" && (
+                    <span className="rounded-full bg-success/15 px-1.5 py-0.5 text-[9px] text-success">
+                      已完成
+                    </span>
+                  )}
+                  {!p.followUpStatus && (
+                    <span className="rounded-full bg-info/15 px-1.5 py-0.5 text-[9px] text-info">
+                      待随访
+                    </span>
+                  )}
+                </div>
+                <div className="mt-0.5 text-[10px] text-muted-foreground truncate">
+                  {p.surgeryName ?? p.diagnosis}
+                  {p.followUpResult && ` · ${p.followUpResult}`}
+                </div>
+              </div>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function MiniBlock({ label, value, tone }: { label: string; value: number; tone: string }) {
+  return (
+    <div className="rounded-xl bg-muted/40 p-2.5 text-center">
+      <div className={cn("text-lg font-bold", tone)}>{value}</div>
+      <div className="text-[10px] text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
   const weeklyAdmission = [
     { label: "周一", value: 6 },
     { label: "周二", value: 8 },
