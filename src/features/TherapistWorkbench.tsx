@@ -238,7 +238,9 @@ function HomeTab({
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
           <MiniStat label="负责康复中" value={totalPatients} />
-          <MiniStat label="待处理总计" value={planPendingCount + assessPendingCount + chatPendingCount} />
+          <button onClick={onOpenRecords} className="text-left active:opacity-80">
+            <MiniStat label="待处理总计 ›" value={planPendingCount + assessPendingCount + chatPendingCount} />
+          </button>
         </div>
       </div>
 
@@ -305,20 +307,6 @@ function HomeTab({
         </div>
       </Card>
 
-      <Card title="本月数据">
-        <div className="grid grid-cols-3 gap-1 p-3 text-center">
-          {[
-            { l: "已出院", v: 18 },
-            { l: "达标率", v: "94%" },
-            { l: "AI 方案采纳", v: "82%" },
-          ].map((x) => (
-            <div key={x.l}>
-              <div className="text-base font-bold text-primary">{x.v}</div>
-              <div className="text-[10px] text-muted-foreground">{x.l}</div>
-            </div>
-          ))}
-        </div>
-      </Card>
     </div>
   );
 }
@@ -557,18 +545,12 @@ function RecordsTab({
             <Metric label="是否下地" value={p.status === "in-surgery" ? "未" : "已下地"} trend="up" />
           </div>
 
-          <div className="grid grid-cols-3 gap-0 border-t">
-            <button
-              onClick={() => onAssess(p)}
-              className="flex items-center justify-center gap-1 py-2.5 text-[11px] text-foreground active:bg-muted/40"
-            >
-              <ClipboardCheck className="h-3 w-3" />康复评估
-            </button>
+          <div className="grid grid-cols-2 gap-0 border-t">
             <button
               onClick={() => onAddRecord(p)}
-              className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] text-foreground active:bg-muted/40"
+              className="flex items-center justify-center gap-1 py-2.5 text-[11px] text-foreground active:bg-muted/40"
             >
-              <PlusCircle className="h-3 w-3" />新增记录
+              <PlusCircle className="h-3 w-3" />每日评估
             </button>
             {p.status === "rehab" ? (
               <button
@@ -583,7 +565,7 @@ function RecordsTab({
                 onClick={() => onSelect(p)}
                 className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] text-primary active:bg-muted/40"
               >
-                <FileText className="h-3 w-3" />历史
+                <FileText className="h-3 w-3" />历史评估
               </button>
             )}
           </div>
