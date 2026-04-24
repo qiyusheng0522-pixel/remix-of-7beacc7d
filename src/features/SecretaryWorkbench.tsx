@@ -17,6 +17,8 @@ import {
   MessageCircle,
   FileSearch,
   Activity,
+  HeartPulse,
+  Sparkles,
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { PatientChatSheet } from "@/components/PatientChatSheet";
@@ -25,18 +27,20 @@ import { ActionSheet, ToastBanner } from "@/components/ActionSheet";
 import { HandoverSheet } from "@/components/HandoverSheet";
 import { VitalsSheet } from "@/components/VitalsSheet";
 import { EducationPushSheet } from "@/components/EducationPushSheet";
+import { FollowUpSheet } from "@/components/FollowUpSheet";
 import { BarChart, ChartCard, HBarRow, StatTile } from "@/components/WorkStats";
 import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type TabKey = "home" | "outpatient" | "inpatient" | "me";
+type TabKey = "home" | "outpatient" | "inpatient" | "followup" | "me";
 type Overlay =
   | { kind: "chat"; patient: Patient }
   | { kind: "archive"; patient: Patient }
   | { kind: "vitals"; patient: Patient }
   | { kind: "handover" }
   | { kind: "education"; candidates: Patient[]; lockSinglePatient?: boolean }
+  | { kind: "followup"; candidates: Patient[] }
   | null;
 
 export function SecretaryWorkbench() {
@@ -47,6 +51,10 @@ export function SecretaryWorkbench() {
 
   const pendingAdmission = patients.filter((p) => p.status === "outpatient-pending");
   const inpatientPatients = patients.filter((p) => p.department === "inpatient");
+  const followUpPatients = patients.filter(
+    (p) => p.status === "follow-up" || p.status === "post-op" || p.status === "rehab",
+  );
+  const followUpPending = followUpPatients.filter((p) => p.followUpStatus !== "done");
   const tasks = todayTasks.secretary;
 
   const showToast = (t: string) => {
@@ -76,6 +84,7 @@ export function SecretaryWorkbench() {
             { key: "home", label: "首页", icon: Home, badge: tasks.length },
             { key: "outpatient", label: "门诊", icon: Hospital, badge: pendingAdmission.length },
             { key: "inpatient", label: "住院", icon: BedDouble },
+            { key: "followup", label: "随访", icon: HeartPulse, badge: followUpPending.length },
             { key: "me", label: "我的", icon: User },
           ]}
         />
@@ -86,18 +95,20 @@ export function SecretaryWorkbench() {
           tasks={tasks}
           pendingCount={pendingAdmission.length}
           inpatientCount={inpatientPatients.length}
+          followUpCount={followUpPending.length}
           onQuick={(key) => {
             if (key === "handover") setOverlay({ kind: "handover" });
             else if (key === "education") setOverlay({ kind: "education", candidates: [...pendingAdmission, ...inpatientPatients] });
             else if (key === "ocr") showToast("OCR 识别：化验单 / 入院单 / 电子病历");
-          else if (key === "vitals") {
-              // 跳转到住院列表录入指标，无患者则不跳
+            else if (key === "followup") setTab("followup");
+            else if (key === "vitals") {
               if (inpatientPatients.length > 0) setTab("inpatient");
             }
           }}
           onTask={handleTaskClick}
           onJumpOutpatient={() => setTab("outpatient")}
           onJumpInpatient={() => setTab("inpatient")}
+          onJumpFollowUp={() => setTab("followup")}
         />
       )}
       {tab === "outpatient" && (
@@ -114,6 +125,12 @@ export function SecretaryWorkbench() {
           list={inpatientPatients}
           onSelect={(p) => setActionPatient(p)}
           onBatchEducation={() => setOverlay({ kind: "education", candidates: inpatientPatients })}
+        />
+      )}
+      {tab === "followup" && (
+        <FollowUpTab
+          list={followUpPatients}
+          onOpen={() => setOverlay({ kind: "followup", candidates: followUpPatients })}
         />
       )}
       {tab === "me" && <MeTab name="张护士长" role="科室秘书 / 责任护士" />}
@@ -134,6 +151,16 @@ export function SecretaryWorkbench() {
           lockSinglePatient={overlay.lockSinglePatient}
           onClose={() => setOverlay(null)}
           onPush={showToast}
+        />
+      )}
+      {overlay?.kind === "followup" && (
+        <FollowUpSheet
+          candidates={overlay.candidates}
+          onClose={() => setOverlay(null)}
+          onPushTo={(msg) => {
+            showToast(msg);
+            setOverlay(null);
+          }}
         />
       )}
 
@@ -157,18 +184,22 @@ function HomeTab({
   tasks,
   pendingCount,
   inpatientCount,
+  followUpCount,
   onQuick,
   onTask,
   onJumpOutpatient,
   onJumpInpatient,
+  onJumpFollowUp,
 }: {
   tasks: typeof todayTasks.secretary;
   pendingCount: number;
   inpatientCount: number;
-  onQuick: (key: "ocr" | "handover" | "vitals" | "education") => void;
+  followUpCount: number;
+  onQuick: (key: "ocr" | "handover" | "vitals" | "education" | "followup") => void;
   onTask: (taskType: string) => void;
   onJumpOutpatient: () => void;
   onJumpInpatient: () => void;
+  onJumpFollowUp: () => void;
 }) {
   return (
     <div className="space-y-3 p-3">
@@ -180,12 +211,15 @@ function HomeTab({
         <div className="mt-1 text-base font-bold">早安, 张护士长 ☀️</div>
         <div className="mt-0.5 text-[11px] opacity-90">今日 {tasks.length} 项待办 · 2 例办理入院</div>
 
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="mt-3 grid grid-cols-3 gap-2">
           <button onClick={onJumpOutpatient} className="text-left active:opacity-80">
-            <MiniStat label="门诊待入院 ›" value={pendingCount} />
+            <MiniStat label="门诊待入 ›" value={pendingCount} />
           </button>
           <button onClick={onJumpInpatient} className="text-left active:opacity-80">
-            <MiniStat label="在院患者 ›" value={inpatientCount} />
+            <MiniStat label="在院 ›" value={inpatientCount} />
+          </button>
+          <button onClick={onJumpFollowUp} className="text-left active:opacity-80">
+            <MiniStat label="待随访 ›" value={followUpCount} />
           </button>
         </div>
       </div>
@@ -387,6 +421,97 @@ function InpatientTab({ list, onSelect, onBatchEducation }: { list: typeof patie
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+function FollowUpTab({ list, onOpen }: { list: typeof patients; onOpen: () => void }) {
+  const pending = list.filter((p) => p.followUpStatus !== "done");
+  const done = list.filter((p) => p.followUpStatus === "done");
+  const needSecond = list.filter((p) => p.followUpStatus === "needs-second");
+
+  return (
+    <div className="space-y-3 p-3">
+      <div
+        className="relative overflow-hidden rounded-2xl p-4 text-primary-foreground"
+        style={{ background: "var(--gradient-primary)" }}
+      >
+        <div className="flex items-center gap-1.5 text-[10px] opacity-90">
+          <HeartPulse className="h-3 w-3" />
+          术后随访清单
+        </div>
+        <div className="mt-1 text-base font-bold">
+          待随访 {pending.length} 人 · 需复访 {needSecond.length} 人
+        </div>
+        <div className="mt-0.5 text-[10px] opacity-80">
+          AI 多轮对话自动随访 · 异常自动推荐处理人
+        </div>
+        <button
+          onClick={onOpen}
+          className="mt-3 flex items-center gap-1 rounded-full bg-white/20 px-3 py-1.5 text-[11px] font-medium backdrop-blur active:bg-white/30"
+        >
+          <Sparkles className="h-3 w-3" />
+          打开 AI 随访清单
+        </button>
+      </div>
+
+      <Card title="随访进度" rightLabel={`共 ${list.length} 例`}>
+        <div className="grid grid-cols-3 gap-2 p-3">
+          <MiniBlock label="待随访" value={pending.length - needSecond.length} tone="text-info" />
+          <MiniBlock label="需复访" value={needSecond.length} tone="text-warning-foreground" />
+          <MiniBlock label="已完成" value={done.length} tone="text-success" />
+        </div>
+      </Card>
+
+      <Card title="随访患者" rightLabel="按术后天数">
+        <div className="divide-y">
+          {list.map((p) => (
+            <button
+              key={p.id}
+              onClick={onOpen}
+              className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left active:bg-muted/40"
+            >
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary">
+                {p.name.slice(0, 1)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[12px] font-medium">{p.name}</span>
+                  {p.followUpStatus === "needs-second" && (
+                    <span className="rounded-full bg-warning/20 px-1.5 py-0.5 text-[9px] text-warning-foreground">
+                      需复访
+                    </span>
+                  )}
+                  {p.followUpStatus === "done" && (
+                    <span className="rounded-full bg-success/15 px-1.5 py-0.5 text-[9px] text-success">
+                      已完成
+                    </span>
+                  )}
+                  {!p.followUpStatus && (
+                    <span className="rounded-full bg-info/15 px-1.5 py-0.5 text-[9px] text-info">
+                      待随访
+                    </span>
+                  )}
+                </div>
+                <div className="mt-0.5 text-[10px] text-muted-foreground truncate">
+                  {p.surgeryName ?? p.diagnosis}
+                  {p.followUpResult && ` · ${p.followUpResult}`}
+                </div>
+              </div>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function MiniBlock({ label, value, tone }: { label: string; value: number; tone: string }) {
+  return (
+    <div className="rounded-xl bg-muted/40 p-2.5 text-center">
+      <div className={cn("text-lg font-bold", tone)}>{value}</div>
+      <div className="text-[10px] text-muted-foreground">{label}</div>
     </div>
   );
 }
