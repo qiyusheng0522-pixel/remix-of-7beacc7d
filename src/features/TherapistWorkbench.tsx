@@ -33,14 +33,14 @@ import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type TabKey = "home" | "plans" | "records" | "me";
+type TabKey = "home" | "surg-confirm" | "plans" | "records" | "me";
 type Overlay =
   | { kind: "chat"; patient: Patient }
   | { kind: "archive"; patient: Patient }
   | { kind: "patient-list" }
-  | { kind: "surg-confirm" }
   | { kind: "discharge"; patient: Patient }
   | null;
+type SurgDecision = "go" | "hold" | "return";
 
 // AI 生成的康复方案（模拟）
 const aiRehabPlan = (patient: Patient) => ({
@@ -79,7 +79,7 @@ export function TherapistWorkbench() {
   const tasks = todayTasks.therapist;
   // 明日手术待治疗师确认（与手术团队同步）
   const tomorrowSurgery = patients.filter((p) => p.status === "admitted" && p.preOpFindings);
-  const [surgConfirms, setSurgConfirms] = useState<Record<string, "ack" | undefined>>({});
+  const [surgConfirms, setSurgConfirms] = useState<Record<string, SurgDecision | undefined>>({});
   const surgPending = tomorrowSurgery.filter((p) => !surgConfirms[p.id]).length;
 
   const showToast = (t: string) => {
@@ -97,6 +97,7 @@ export function TherapistWorkbench() {
           onChange={(k) => setTab(k as TabKey)}
           items={[
             { key: "home", label: "首页", icon: Home, badge: tasks.length },
+            { key: "surg-confirm", label: "手术确认", icon: Calendar, badge: surgPending },
             { key: "plans", label: "康复方案", icon: HeartPulse, badge: myPatients.filter((p) => planStatuses[p.id] === "ai-draft").length },
             { key: "records", label: "院内评估", icon: FileText, badge: inpatientList.length },
             { key: "me", label: "我的", icon: User },
@@ -116,8 +117,26 @@ export function TherapistWorkbench() {
           onOpenPatients={() => setOverlay({ kind: "patient-list" })}
           onOpenPlans={() => setTab("plans")}
           onOpenRecords={() => setTab("records")}
-          onOpenSurgConfirm={() => setOverlay({ kind: "surg-confirm" })}
+          onOpenSurgConfirm={() => setTab("surg-confirm")}
           onQuick={(l) => showToast(`已打开 ${l}`)}
+        />
+      )}
+      {tab === "surg-confirm" && (
+        <SurgConfirmTab
+          list={tomorrowSurgery}
+          decisions={surgConfirms}
+          onGo={(p) => {
+            setSurgConfirms((s) => ({ ...s, [p.id]: "go" }));
+            showToast(`已确认如期康复介入：${p.name}`);
+          }}
+          onHold={(p) => {
+            setSurgConfirms((s) => ({ ...s, [p.id]: "hold" }));
+            showToast(`已暂缓 ${p.name}，已通知主刀医生`);
+          }}
+          onReturn={(p) => {
+            setSurgConfirms((s) => ({ ...s, [p.id]: "return" }));
+            showToast(`已退回 ${p.name}，待重新评估`);
+          }}
         />
       )}
       {tab === "plans" && (
@@ -184,17 +203,7 @@ export function TherapistWorkbench() {
           selfName="朱年鑫"
         />
       )}
-      {overlay?.kind === "surg-confirm" && (
-        <SurgConfirmSheet
-          list={tomorrowSurgery}
-          confirms={surgConfirms}
-          onClose={() => setOverlay(null)}
-          onAck={(p) => {
-            setSurgConfirms((s) => ({ ...s, [p.id]: "ack" }));
-            showToast(`已确认收到术前量表：${p.name}`);
-          }}
-        />
-      )}
+      {/* 手术确认现已作为独立 Tab，不再作为 overlay */}
       {overlay?.kind === "discharge" && (
         <DischargeSheet
           patient={overlay.patient}
@@ -842,76 +851,146 @@ function PlanStatusBadge({ status }: { status: PlanStatus }) {
   );
 }
 
-/* ---------- 手术确认（治疗师同步） ---------- */
-function SurgConfirmSheet({
+/* ---------- 手术确认（治疗师同步，与医疗团队展示一致） ---------- */
+function aiSurgConclusion(p: Patient): { recommendation: "go" | "hold"; summary: string; reasons: string[] } {
+  const abnormal = p.preOpFindings?.filter((f) => f.abnormal) ?? [];
+  if (abnormal.length === 0) {
+    return {
+      recommendation: "go",
+      summary: "AI 结论：建议如期手术",
+      reasons: ["术前各项检查指标均在正常范围", "无明显手术禁忌", "可按计划开展"],
+    };
+  }
+  return {
+    recommendation: "hold",
+    summary: `AI 结论：建议暂缓手术（${abnormal.length} 项异常）`,
+    reasons: abnormal.map((a) => `${a.label} ${a.value} 偏离正常范围，建议复查或会诊`),
+  };
+}
+
+function SurgConfirmTab({
   list,
-  confirms,
-  onClose,
-  onAck,
+  decisions,
+  onGo,
+  onHold,
+  onReturn,
 }: {
   list: Patient[];
-  confirms: Record<string, "ack" | undefined>;
-  onClose: () => void;
-  onAck: (p: Patient) => void;
+  decisions: Record<string, SurgDecision | undefined>;
+  onGo: (p: Patient) => void;
+  onHold: (p: Patient) => void;
+  onReturn: (p: Patient) => void;
 }) {
   return (
-    <div className="absolute inset-0 z-50 flex flex-col bg-background">
-      <div className="flex items-center justify-between border-b bg-card px-3 py-2.5">
-        <button onClick={onClose}>
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <div className="text-[13px] font-semibold">手术确认 · 治疗师同步</div>
-        <div className="w-4" />
+    <div className="space-y-3 p-3">
+      <div className="rounded-2xl border bg-info/5 p-3 text-[11px] text-info">
+        <Sparkles className="mr-1 inline h-3 w-3" />
+        AI 已根据值班医生录入的术前量表给出结论，治疗师需确认患者是否满足手术条件，不满足则延迟手术。
       </div>
-      <div className="flex-1 space-y-2 overflow-y-auto p-3">
-        <div className="rounded-2xl border bg-info/5 p-2.5 text-[11px] text-info">
-          <Sparkles className="mr-1 inline h-3 w-3" />
-          手术团队已确认明日手术，治疗师需同步确认收到术前康复方案。
+
+      {list.length === 0 && (
+        <div className="rounded-2xl border bg-card p-6 text-center text-[12px] text-muted-foreground">
+          暂无待确认手术
         </div>
-        {list.length === 0 && (
-          <div className="rounded-2xl border bg-card p-6 text-center text-[12px] text-muted-foreground">
-            暂无待确认手术
-          </div>
-        )}
-        {list.map((p) => {
-          const acked = confirms[p.id] === "ack";
-          return (
-            <div key={p.id} className="overflow-hidden rounded-2xl border bg-card">
-              <div className="border-b p-3">
-                <div className="flex items-center gap-1.5">
-                  {p.bedNo && (
-                    <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
-                      {p.bedNo}床
-                    </span>
-                  )}
-                  <span className="text-sm font-bold">{p.name}</span>
-                  <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
-                  {p.side && (
-                    <span className="rounded bg-warning/20 px-1 py-0.5 text-[9px] font-bold text-warning-foreground">
-                      患侧 {p.side}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-1 text-[10px] text-muted-foreground">
-                  {p.surgeryName} · 主刀 {p.director} · 术日 {p.surgeryDate}
-                </div>
-              </div>
-              <button
-                disabled={acked}
-                onClick={() => onAck(p)}
-                className={cn(
-                  "flex w-full items-center justify-center gap-1 py-2.5 text-[12px] font-medium",
-                  acked ? "bg-muted text-muted-foreground" : "text-primary-foreground",
+      )}
+
+      {list.map((p) => {
+        const d = decisions[p.id];
+        const ai = aiSurgConclusion(p);
+        return (
+          <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
+            <div className="border-b p-3">
+              <div className="flex items-center gap-1.5">
+                <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
+                  {p.bedNo}床
+                </span>
+                <span className="text-sm font-bold">{p.name}</span>
+                <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
+                {p.side && (
+                  <span className="rounded bg-warning/20 px-1 py-0.5 text-[9px] font-bold text-warning-foreground">
+                    患侧 {p.side}
+                  </span>
                 )}
-                style={!acked ? { background: "var(--gradient-primary)" } : undefined}
+              </div>
+              <div className="mt-1 text-[10px] text-muted-foreground">
+                {p.diagnosis} · {p.surgeryName} · {p.director}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-1 border-b p-3">
+              {p.preOpFindings?.map((f) => (
+                <span
+                  key={f.label}
+                  className={cn(
+                    "rounded-md px-1.5 py-0.5 text-[10px]",
+                    f.abnormal ? "bg-destructive/10 font-bold text-destructive" : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {f.label} {f.value}
+                </span>
+              ))}
+            </div>
+
+            <div className={cn("border-b p-3", ai.recommendation === "go" ? "bg-success/5" : "bg-destructive/5")}>
+              <div className={cn("flex items-center gap-1 text-[11px] font-bold", ai.recommendation === "go" ? "text-success" : "text-destructive")}>
+                <Sparkles className="h-3 w-3" />
+                {ai.summary}
+              </div>
+              <ul className="mt-1 space-y-0.5 pl-3 text-[10px] text-muted-foreground">
+                {ai.reasons.map((r, i) => (
+                  <li key={i} className="list-disc">{r}</li>
+                ))}
+              </ul>
+            </div>
+
+            {d === "go" && (
+              <div className="mx-3 mb-2 flex items-center gap-1.5 rounded-md bg-success/10 p-2 text-[10px] text-success">
+                <CheckCircle2 className="h-3 w-3" />已确认满足手术条件，已同步主刀
+              </div>
+            )}
+            {d === "hold" && (
+              <div className="mx-3 mb-2 flex items-center gap-1.5 rounded-md bg-warning/10 p-2 text-[10px] text-warning-foreground">
+                <AlertTriangle className="h-3 w-3" />已暂缓手术，理由已归档
+              </div>
+            )}
+            {d === "return" && (
+              <div className="mx-3 mb-2 flex items-center gap-1.5 rounded-md bg-destructive/10 p-2 text-[10px] text-destructive">
+                <Trash2 className="h-3 w-3" />已退回手术待排
+              </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-0 border-t">
+              <button
+                onClick={() => onReturn(p)}
+                className={cn(
+                  "flex items-center justify-center gap-1 py-2.5 text-[11px] active:bg-muted/40",
+                  d === "return" ? "bg-destructive/10 font-medium text-destructive" : "text-foreground",
+                )}
               >
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                {acked ? "已确认收到" : "确认收到术前方案"}
+                <Trash2 className="h-3 w-3" />退回
+              </button>
+              <button
+                onClick={() => onHold(p)}
+                className={cn(
+                  "flex items-center justify-center gap-1 border-l py-2.5 text-[11px] active:bg-muted/40",
+                  d === "hold" ? "bg-warning/15 font-medium text-warning-foreground" : "text-foreground",
+                )}
+              >
+                <AlertTriangle className="h-3 w-3" />暂缓
+              </button>
+              <button
+                onClick={() => onGo(p)}
+                className={cn(
+                  "flex items-center justify-center gap-1 border-l py-2.5 text-[11px] active:bg-muted/40",
+                  d === "go" ? "bg-primary/10 font-medium text-primary" : "text-foreground",
+                )}
+              >
+                <CheckCircle2 className="h-3 w-3" />如期手术
               </button>
             </div>
-          );
-        })}
-      </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
