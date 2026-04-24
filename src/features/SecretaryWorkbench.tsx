@@ -18,6 +18,7 @@ import {
   FileSearch,
   Activity,
   HeartPulse,
+  Sparkles,
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { PatientChatSheet } from "@/components/PatientChatSheet";
