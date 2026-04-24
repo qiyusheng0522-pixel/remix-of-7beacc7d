@@ -183,18 +183,22 @@ function HomeTab({
   tasks,
   pendingCount,
   inpatientCount,
+  followUpCount,
   onQuick,
   onTask,
   onJumpOutpatient,
   onJumpInpatient,
+  onJumpFollowUp,
 }: {
   tasks: typeof todayTasks.secretary;
   pendingCount: number;
   inpatientCount: number;
-  onQuick: (key: "ocr" | "handover" | "vitals" | "education") => void;
+  followUpCount: number;
+  onQuick: (key: "ocr" | "handover" | "vitals" | "education" | "followup") => void;
   onTask: (taskType: string) => void;
   onJumpOutpatient: () => void;
   onJumpInpatient: () => void;
+  onJumpFollowUp: () => void;
 }) {
   return (
     <div className="space-y-3 p-3">
@@ -206,12 +210,15 @@ function HomeTab({
         <div className="mt-1 text-base font-bold">早安, 张护士长 ☀️</div>
         <div className="mt-0.5 text-[11px] opacity-90">今日 {tasks.length} 项待办 · 2 例办理入院</div>
 
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="mt-3 grid grid-cols-3 gap-2">
           <button onClick={onJumpOutpatient} className="text-left active:opacity-80">
-            <MiniStat label="门诊待入院 ›" value={pendingCount} />
+            <MiniStat label="门诊待入 ›" value={pendingCount} />
           </button>
           <button onClick={onJumpInpatient} className="text-left active:opacity-80">
-            <MiniStat label="在院患者 ›" value={inpatientCount} />
+            <MiniStat label="在院 ›" value={inpatientCount} />
+          </button>
+          <button onClick={onJumpFollowUp} className="text-left active:opacity-80">
+            <MiniStat label="待随访 ›" value={followUpCount} />
           </button>
         </div>
       </div>
