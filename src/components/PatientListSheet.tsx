@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Search, FileSearch, MessageCircle, Edit3, Save, Stethoscope } from "lucide-react";
+import { ArrowLeft, Search, FileSearch, MessageCircle, Edit3, Save, Stethoscope, ChevronRight } from "lucide-react";
 import type { Patient } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
