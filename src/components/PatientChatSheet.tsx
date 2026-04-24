@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Sparkles, FileSearch, ArrowLeft, Phone, BellRing, CheckCircle2, RefreshCw, Edit3 } from "lucide-react";
+import { Send, Sparkles, FileSearch, ArrowLeft, Phone, BellRing, CheckCircle2, RefreshCw, Package, X } from "lucide-react";
 import type { Patient } from "@/lib/types";
 import { aiAutoReply, getArchive } from "@/lib/mock-records";
 import { PatientArchiveSheet } from "./PatientArchiveSheet";
-import { EducationPushSheet } from "./EducationPushSheet";
 
 interface Msg {
   id: string;
