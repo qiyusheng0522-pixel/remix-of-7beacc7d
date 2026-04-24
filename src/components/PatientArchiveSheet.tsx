@@ -1,6 +1,20 @@
-import { X, FileHeart, Pill, History, AlertTriangle, Activity, ShieldAlert, Stethoscope } from "lucide-react";
+import { useState } from "react";
+import {
+  X,
+  FileHeart,
+  Pill,
+  History,
+  AlertTriangle,
+  Activity,
+  ShieldAlert,
+  Stethoscope,
+  StickyNote,
+  Plus,
+  Save,
+} from "lucide-react";
 import type { Patient } from "@/lib/types";
 import { getArchive } from "@/lib/mock-records";
+import { addNote, usePatientNotes, type PatientNote } from "@/lib/patient-notes";
 
 export function PatientArchiveSheet({ patient, onClose }: { patient: Patient; onClose: () => void }) {
   const arc = getArchive(patient.id);
