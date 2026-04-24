@@ -144,11 +144,6 @@ function HomeTab({
         OCR 录入新量表
       </button>
 
-      <div className="grid grid-cols-3 gap-2 rounded-2xl border bg-card p-3">
-        <QuickAction icon={ClipboardCheck} label="术前量表" tone="bg-info/15 text-info" onClick={onOpenScales} />
-        <QuickAction icon={Edit3} label="手工编辑" tone="bg-primary/15 text-primary" onClick={onOpenScales} />
-        <QuickAction icon={Send} label="推送团队" tone="bg-success/15 text-success" onClick={onOpenScales} />
-      </div>
 
       <Card title="今日待办" rightLabel={`${tasks.length} 项`}>
         <div className="divide-y">
@@ -495,14 +490,6 @@ function MeTab() {
         <LineChart data={accuracyTrend} />
       </ChartCard>
 
-      <Card title="设置">
-        {["OCR 历史记录", "推送规则", "关于骨安"].map((s) => (
-          <button key={s} className="flex w-full items-center justify-between border-b px-3 py-3 text-[12px] last:border-b-0 active:bg-muted/30">
-            {s}
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-          </button>
-        ))}
-      </Card>
     </div>
   );
 }
