@@ -69,7 +69,15 @@ export function SurgicalTeamWorkbench() {
       }
     >
       {tab === "home" && (
-        <HomeTab tomorrow={tomorrowSurgery.length} today={todaySurgery.length} tasks={tasks} onJump={(t) => setTab(t)} />
+        <HomeTab
+          tomorrow={tomorrowSurgery.length}
+          today={todaySurgery.length}
+          preopPending={tomorrowSurgery.filter((p) => !decisions[p.id]).length}
+          intraopPending={todaySurgery.length}
+          chatPending={3}
+          tasks={tasks}
+          onJump={(t) => setTab(t)}
+        />
       )}
       {tab === "preop" && (
         <PreOpTab
