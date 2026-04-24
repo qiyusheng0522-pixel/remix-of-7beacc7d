@@ -13,16 +13,19 @@ import {
   ArrowLeft,
   Send,
   RotateCcw,
+  MessageCircle,
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { Card, MiniStat, QuickAction } from "./SecretaryWorkbench";
 import { BarChart, ChartCard, DonutChart, StatTile } from "@/components/WorkStats";
 import { ToastBanner } from "@/components/ActionSheet";
+import { PatientChatSheet } from "@/components/PatientChatSheet";
+import { PatientListSheet } from "@/components/PatientListSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type TabKey = "home" | "preop" | "intraop" | "me";
+type TabKey = "home" | "preop" | "intraop" | "chat" | "me";
 type Decision = "go" | "hold" | "return";
 
 export function SurgicalTeamWorkbench() {
@@ -30,10 +33,13 @@ export function SurgicalTeamWorkbench() {
   const [decisions, setDecisions] = useState<Record<string, Decision | undefined>>({});
   const [reasonFor, setReasonFor] = useState<{ patient: Patient; decision: "hold" | "return" } | null>(null);
   const [intraOpFor, setIntraOpFor] = useState<Patient | null>(null);
+  const [chatPatient, setChatPatient] = useState<Patient | null>(null);
+  const [showPatientList, setShowPatientList] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const tomorrowSurgery = patients.filter((p) => p.status === "admitted" && p.preOpFindings);
   const todaySurgery = patients.filter((p) => p.status === "in-surgery");
+  const myPatients = patients.filter((p) => p.director === "王主任");
   const tasks = todayTasks["surgical-team"];
 
   const showToast = (t: string) => {
@@ -53,6 +59,7 @@ export function SurgicalTeamWorkbench() {
             { key: "home", label: "首页", icon: Home, badge: tasks.length },
             { key: "preop", label: "手术确认", icon: Calendar, badge: tomorrowSurgery.length },
             { key: "intraop", label: "术中量表", icon: ClipboardEdit, badge: todaySurgery.length },
+            { key: "chat", label: "患者沟通", icon: MessageCircle, badge: 3 },
             { key: "me", label: "我的", icon: User },
           ]}
         />
@@ -79,7 +86,23 @@ export function SurgicalTeamWorkbench() {
           onOpen={(p) => setIntraOpFor(p)}
         />
       )}
+      {tab === "chat" && (
+        <ChatListTab list={myPatients} onOpen={(p) => setChatPatient(p)} onOpenAll={() => setShowPatientList(true)} />
+      )}
       {tab === "me" && <MeTab />}
+
+      {chatPatient && (
+        <PatientChatSheet patient={chatPatient} onClose={() => setChatPatient(null)} selfRole="主刀" />
+      )}
+      {showPatientList && (
+        <PatientListSheet
+          inpatientList={myPatients.filter((p) => p.department === "inpatient")}
+          outpatientList={myPatients.filter((p) => p.department === "outpatient")}
+          onClose={() => setShowPatientList(false)}
+          onArchive={(p) => { setShowPatientList(false); setChatPatient(p); }}
+          onChat={(p) => { setShowPatientList(false); setChatPatient(p); }}
+        />
+      )}
 
       {reasonFor && (
         <ReasonSheet
@@ -527,3 +550,48 @@ function MeTab() {
     </div>
   );
 }
+
+/* ---------- 患者沟通列表（同治疗师端） ---------- */
+function ChatListTab({ list, onOpen, onOpenAll }: { list: Patient[]; onOpen: (p: Patient) => void; onOpenAll: () => void }) {
+  return (
+    <div className="space-y-3 p-3">
+      <div className="rounded-2xl border bg-info/5 p-2.5 text-[11px] text-info">
+        <MessageCircle className="mr-1 inline h-3 w-3" />
+        与负责患者直接沟通，AI 已准备草稿，确认后即可发送。
+      </div>
+      <div className="flex items-center justify-between px-1">
+        <div className="text-xs font-semibold">我的患者 · {list.length}</div>
+        <button onClick={onOpenAll} className="rounded-full bg-primary/10 px-2 py-1 text-[10px] text-primary">
+          全部患者
+        </button>
+      </div>
+      {list.map((p) => (
+        <button
+          key={p.id}
+          onClick={() => onOpen(p)}
+          className="w-full rounded-2xl border bg-card p-3 text-left active:bg-muted/30"
+        >
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-[12px] font-bold text-primary">
+              {p.name.slice(0, 1)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1 text-[12px] font-semibold">
+                {p.name}
+                {p.bedNo && <span className="text-[10px] text-muted-foreground">· {p.bedNo}床</span>}
+                {p.side && (
+                  <span className="rounded bg-warning/20 px-1 py-0.5 text-[9px] font-bold text-warning-foreground">
+                    患侧 {p.side}
+                  </span>
+                )}
+              </div>
+              <div className="truncate text-[10px] text-muted-foreground">{p.surgeryName ?? p.diagnosis}</div>
+            </div>
+            <MessageCircle className="h-4 w-4 text-info" />
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
+

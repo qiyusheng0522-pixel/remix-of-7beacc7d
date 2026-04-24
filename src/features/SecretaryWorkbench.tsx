@@ -139,7 +139,7 @@ export function SecretaryWorkbench() {
         <PatientChatSheet patient={overlay.patient} onClose={() => setOverlay(null)} selfRole="护士" />
       )}
       {overlay?.kind === "archive" && (
-        <PatientArchiveSheet patient={overlay.patient} onClose={() => setOverlay(null)} />
+        <PatientArchiveSheet patient={overlay.patient} onClose={() => setOverlay(null)} selfRole="护士" selfName="张护士长" />
       )}
       {overlay?.kind === "vitals" && (
         <VitalsSheet patient={overlay.patient} onClose={() => setOverlay(null)} onSave={(t) => { showToast(t); setOverlay(null); }} />
@@ -373,30 +373,61 @@ function OutpatientTab({
 }
 
 function InpatientTab({ list, onSelect, onBatchEducation }: { list: typeof patients; onSelect: (p: Patient) => void; onBatchEducation: () => void }) {
+  const [sub, setSub] = useState<"all" | "discharge">("all");
+  // 今日出院 = 状态为 rehab 或已下出院评估的患者（mock）
+  const dischargeToday = list.filter((p) => p.status === "rehab");
+  const visible = sub === "all" ? list : dischargeToday;
   return (
     <div className="space-y-3 p-3">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         {[
           { l: "总床位", v: 16, c: "text-foreground" },
           { l: "在院", v: list.length, c: "text-primary" },
           { l: "今日手术", v: 3, c: "text-warning-foreground" },
+          { l: "今日出院", v: dischargeToday.length, c: "text-success" },
         ].map((x) => (
-          <div key={x.l} className="rounded-xl border bg-card p-2.5 text-center">
-            <div className={cn("text-lg font-bold", x.c)}>{x.v}</div>
-            <div className="text-[10px] text-muted-foreground">{x.l}</div>
+          <div key={x.l} className="rounded-xl border bg-card p-2 text-center">
+            <div className={cn("text-base font-bold", x.c)}>{x.v}</div>
+            <div className="text-[9px] text-muted-foreground">{x.l}</div>
           </div>
         ))}
       </div>
 
+      <div className="grid grid-cols-2 overflow-hidden rounded-full border bg-muted/30 p-0.5 text-[12px]">
+        <button
+          onClick={() => setSub("all")}
+          className={cn(
+            "rounded-full py-1.5 font-medium transition-colors",
+            sub === "all" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
+          )}
+        >
+          在院全部 · {list.length}
+        </button>
+        <button
+          onClick={() => setSub("discharge")}
+          className={cn(
+            "rounded-full py-1.5 font-medium transition-colors",
+            sub === "discharge" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
+          )}
+        >
+          今日出院 · {dischargeToday.length}
+        </button>
+      </div>
+
       <div className="flex items-center justify-between px-1">
-        <div className="text-xs font-semibold">床位视图</div>
+        <div className="text-xs font-semibold">{sub === "all" ? "床位视图" : "今日出院待办"}</div>
         <button onClick={onBatchEducation} className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
           <BellRing className="h-3 w-3" />批量宣教
         </button>
       </div>
 
       <div className="space-y-2">
-        {list.map((p) => (
+        {visible.length === 0 && (
+          <div className="rounded-2xl border bg-card p-6 text-center text-[12px] text-muted-foreground">
+            {sub === "discharge" ? "今日暂无出院患者" : "暂无在院患者"}
+          </div>
+        )}
+        {visible.map((p) => (
           <button key={p.id} onClick={() => onSelect(p)} className="w-full rounded-2xl border bg-card p-3 text-left active:bg-muted/30">
             <div className="flex items-start gap-2.5">
               <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -404,11 +435,16 @@ function InpatientTab({ list, onSelect, onBatchEducation }: { list: typeof patie
                 <span className="font-mono text-sm font-bold leading-none">{p.bedNo}</span>
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center gap-1">
                   <span className="text-sm font-bold">{p.name}</span>
                   <span className="text-[10px] text-muted-foreground">
                     {p.gender}·{p.age}
                   </span>
+                  {p.side && (
+                    <span className="rounded bg-warning/20 px-1 py-0.5 text-[9px] font-bold text-warning-foreground">
+                      患侧 {p.side}
+                    </span>
+                  )}
                   {p.isNew && <Tag color="info">新</Tag>}
                   {p.infectious && <Tag color="destructive">传</Tag>}
                   {p.communicationDifficult && <Tag color="warning">沟</Tag>}

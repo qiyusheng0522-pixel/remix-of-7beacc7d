@@ -14,16 +14,18 @@ import {
   Edit3,
   Save,
   Sparkles,
+  MessageCircle,
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { Card, MiniStat, SearchBar } from "./SecretaryWorkbench";
 import { BarChart, ChartCard, LineChart, StatTile } from "@/components/WorkStats";
 import { ToastBanner } from "@/components/ActionSheet";
+import { PatientChatSheet } from "@/components/PatientChatSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type TabKey = "home" | "scales" | "history" | "me";
+type TabKey = "home" | "scales" | "chat" | "history" | "me";
 
 interface ScaleField {
   label: string;
@@ -34,8 +36,11 @@ interface ScaleField {
 export function DoctorOnDutyWorkbench() {
   const [tab, setTab] = useState<TabKey>("home");
   const [editor, setEditor] = useState<Patient | null>(null);
+  const [chatPatient, setChatPatient] = useState<Patient | null>(null);
   const [pushed, setPushed] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<string | null>(null);
+
+  const myPatients = patients.filter((p) => p.responsibleDoctor === "朱医生");
 
   const todaySurgery = patients.filter((p) => p.status === "admitted" && p.preOpFindings);
   const tasks = todayTasks["doctor-on-duty"];

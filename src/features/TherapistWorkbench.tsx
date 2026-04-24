@@ -17,6 +17,9 @@ import {
   PlusCircle,
   Mic,
   Save,
+  Calendar,
+  ArrowLeft,
+  AlertTriangle,
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { Card, MiniStat, QuickAction } from "./SecretaryWorkbench";
@@ -35,6 +38,8 @@ type Overlay =
   | { kind: "chat"; patient: Patient }
   | { kind: "archive"; patient: Patient }
   | { kind: "patient-list" }
+  | { kind: "surg-confirm" }
+  | { kind: "discharge"; patient: Patient }
   | null;
 
 // AI 生成的康复方案（模拟）
@@ -72,6 +77,10 @@ export function TherapistWorkbench() {
   const outpatientList = patients.filter((p) => p.department === "outpatient" && p.status === "rehab");
   const myPatients = [...inpatientList, ...outpatientList];
   const tasks = todayTasks.therapist;
+  // 明日手术待治疗师确认（与手术团队同步）
+  const tomorrowSurgery = patients.filter((p) => p.status === "admitted" && p.preOpFindings);
+  const [surgConfirms, setSurgConfirms] = useState<Record<string, "ack" | undefined>>({});
+  const surgPending = tomorrowSurgery.filter((p) => !surgConfirms[p.id]).length;
 
   const showToast = (t: string) => {
     setToast(t);
@@ -103,9 +112,11 @@ export function TherapistWorkbench() {
           planPendingCount={myPatients.filter((p) => planStatuses[p.id] === "ai-draft").length}
           assessPendingCount={tasks.filter((t) => t.type === "preop-confirm" || t.type === "discharge").length}
           chatPendingCount={3}
+          surgConfirmPending={surgPending}
           onOpenPatients={() => setOverlay({ kind: "patient-list" })}
           onOpenPlans={() => setTab("plans")}
           onOpenRecords={() => setTab("records")}
+          onOpenSurgConfirm={() => setOverlay({ kind: "surg-confirm" })}
           onQuick={(l) => showToast(`已打开 ${l}`)}
         />
       )}
@@ -132,7 +143,7 @@ export function TherapistWorkbench() {
           onSelect={(p) => setActionPatient(p)}
           onAssess={(p) => showToast(`正在为 ${p.name} 进行康复评估...`)}
           onAddRecord={(p) => setRecordFor(p)}
-          onDischarge={(p) => showToast(`已发起康复出院评估：${p.name}`)}
+          onDischarge={(p) => setOverlay({ kind: "discharge", patient: p })}
         />
       )}
       {tab === "me" && <MeTab />}
@@ -169,6 +180,29 @@ export function TherapistWorkbench() {
         <PatientArchiveSheet
           patient={overlay.patient}
           onClose={() => setOverlay(null)}
+          selfRole="治疗师"
+          selfName="朱年鑫"
+        />
+      )}
+      {overlay?.kind === "surg-confirm" && (
+        <SurgConfirmSheet
+          list={tomorrowSurgery}
+          confirms={surgConfirms}
+          onClose={() => setOverlay(null)}
+          onAck={(p) => {
+            setSurgConfirms((s) => ({ ...s, [p.id]: "ack" }));
+            showToast(`已确认收到术前量表：${p.name}`);
+          }}
+        />
+      )}
+      {overlay?.kind === "discharge" && (
+        <DischargeSheet
+          patient={overlay.patient}
+          onClose={() => setOverlay(null)}
+          onConfirm={(note) => {
+            showToast(`已确认 ${overlay.patient.name} 出院 · 备注已同步`);
+            setOverlay(null);
+          }}
         />
       )}
       {overlay?.kind === "patient-list" && (
@@ -211,9 +245,11 @@ function HomeTab({
   planPendingCount,
   assessPendingCount,
   chatPendingCount,
+  surgConfirmPending,
   onOpenPatients,
   onOpenPlans,
   onOpenRecords,
+  onOpenSurgConfirm,
   onQuick,
 }: {
   tasks: typeof todayTasks.therapist;
@@ -222,35 +258,30 @@ function HomeTab({
   planPendingCount: number;
   assessPendingCount: number;
   chatPendingCount: number;
+  surgConfirmPending: number;
   onOpenPatients: () => void;
   onOpenPlans: () => void;
   onOpenRecords: () => void;
+  onOpenSurgConfirm: () => void;
   onQuick: (l: string) => void;
 }) {
-  const totalPatients = inpatientCount + outpatientCount;
   return (
     <div className="space-y-3 p-3">
       <div className="rounded-2xl p-4 text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
         <div className="text-[10px] opacity-80">康复治疗师 · 工作概览</div>
         <div className="mt-1 text-base font-bold">朱年鑫, 加油 💪</div>
         <div className="mt-0.5 text-[11px] opacity-90">
-          负责康复 {totalPatients} 例（住院 {inpatientCount} · 门诊 {outpatientCount}）, 待办 {tasks.length} 项
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <MiniStat label="负责康复中" value={totalPatients} />
-          <button onClick={onOpenRecords} className="text-left active:opacity-80">
-            <MiniStat label="待处理总计 ›" value={planPendingCount + assessPendingCount + chatPendingCount} />
-          </button>
+          住院 {inpatientCount} · 门诊 {outpatientCount} · 今日待办 {tasks.length} 项
         </div>
       </div>
 
-      {/* 4 个工作台统计入口 */}
+      {/* 工作台统计入口 */}
       <div className="grid grid-cols-2 gap-2">
         <StatEntry
           icon={Users}
           label="患者管理"
           sub={`住院 ${inpatientCount} · 门诊 ${outpatientCount}`}
-          value={totalPatients}
+          value={inpatientCount + outpatientCount}
           tone="bg-info/10 text-info"
           onClick={onOpenPatients}
         />
@@ -280,6 +311,23 @@ function HomeTab({
           badge={chatPendingCount > 0}
           tone="bg-success/15 text-success"
           onClick={onOpenPatients}
+        />
+        <StatEntry
+          icon={Calendar}
+          label="手术确认"
+          sub={surgConfirmPending > 0 ? `${surgConfirmPending} 例待治疗师确认` : "全部已确认"}
+          value={surgConfirmPending}
+          badge={surgConfirmPending > 0}
+          tone="bg-warning/15 text-warning-foreground"
+          onClick={onOpenSurgConfirm}
+        />
+        <StatEntry
+          icon={Sparkles}
+          label="今日待办"
+          sub={`${tasks.length} 项任务`}
+          value={tasks.length}
+          tone="bg-info/10 text-info"
+          onClick={onOpenRecords}
         />
       </div>
 
@@ -793,4 +841,131 @@ function PlanStatusBadge({ status }: { status: PlanStatus }) {
     </span>
   );
 }
+
+/* ---------- 手术确认（治疗师同步） ---------- */
+function SurgConfirmSheet({
+  list,
+  confirms,
+  onClose,
+  onAck,
+}: {
+  list: Patient[];
+  confirms: Record<string, "ack" | undefined>;
+  onClose: () => void;
+  onAck: (p: Patient) => void;
+}) {
+  return (
+    <div className="absolute inset-0 z-50 flex flex-col bg-background">
+      <div className="flex items-center justify-between border-b bg-card px-3 py-2.5">
+        <button onClick={onClose}>
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="text-[13px] font-semibold">手术确认 · 治疗师同步</div>
+        <div className="w-4" />
+      </div>
+      <div className="flex-1 space-y-2 overflow-y-auto p-3">
+        <div className="rounded-2xl border bg-info/5 p-2.5 text-[11px] text-info">
+          <Sparkles className="mr-1 inline h-3 w-3" />
+          手术团队已确认明日手术，治疗师需同步确认收到术前康复方案。
+        </div>
+        {list.length === 0 && (
+          <div className="rounded-2xl border bg-card p-6 text-center text-[12px] text-muted-foreground">
+            暂无待确认手术
+          </div>
+        )}
+        {list.map((p) => {
+          const acked = confirms[p.id] === "ack";
+          return (
+            <div key={p.id} className="overflow-hidden rounded-2xl border bg-card">
+              <div className="border-b p-3">
+                <div className="flex items-center gap-1.5">
+                  {p.bedNo && (
+                    <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
+                      {p.bedNo}床
+                    </span>
+                  )}
+                  <span className="text-sm font-bold">{p.name}</span>
+                  <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
+                  {p.side && (
+                    <span className="rounded bg-warning/20 px-1 py-0.5 text-[9px] font-bold text-warning-foreground">
+                      患侧 {p.side}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 text-[10px] text-muted-foreground">
+                  {p.surgeryName} · 主刀 {p.director} · 术日 {p.surgeryDate}
+                </div>
+              </div>
+              <button
+                disabled={acked}
+                onClick={() => onAck(p)}
+                className={cn(
+                  "flex w-full items-center justify-center gap-1 py-2.5 text-[12px] font-medium",
+                  acked ? "bg-muted text-muted-foreground" : "text-primary-foreground",
+                )}
+                style={!acked ? { background: "var(--gradient-primary)" } : undefined}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {acked ? "已确认收到" : "确认收到术前方案"}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- 出院备注 ---------- */
+function DischargeSheet({
+  patient,
+  onClose,
+  onConfirm,
+}: {
+  patient: Patient;
+  onClose: () => void;
+  onConfirm: (note: string) => void;
+}) {
+  const [note, setNote] = useState("");
+  return (
+    <div className="absolute inset-0 z-[60] flex flex-col bg-background">
+      <div className="flex items-center justify-between border-b bg-card px-3 py-2.5">
+        <button onClick={onClose} className="text-[12px] text-muted-foreground">取消</button>
+        <div className="text-[13px] font-semibold">康复出院确认 · {patient.name}</div>
+        <button
+          disabled={!note.trim()}
+          onClick={() => onConfirm(note.trim())}
+          className="flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-[11px] font-medium text-primary-foreground disabled:opacity-40"
+        >
+          <Save className="h-3 w-3" />确认出院
+        </button>
+      </div>
+      <div className="flex-1 space-y-3 overflow-y-auto bg-muted/20 p-3">
+        <div className="rounded-2xl border bg-warning/5 p-2.5 text-[11px] text-warning-foreground">
+          <AlertTriangle className="mr-1 inline h-3 w-3" />
+          确认出院前必须填写出院备注，所有角色（医生 / 护士 / 治疗师）均可查看。
+        </div>
+        <div className="rounded-2xl border bg-card p-3 text-[11px]">
+          <div className="font-semibold">
+            {patient.bedNo && `${patient.bedNo}床 · `}{patient.name} · {patient.surgeryName ?? patient.diagnosis}
+          </div>
+          <div className="mt-1 text-[10px] text-muted-foreground">
+            术日 {patient.surgeryDate ?? "—"} · 患侧 {patient.side ?? "—"}
+          </div>
+        </div>
+        <div>
+          <div className="mb-1 text-[11px] font-semibold">出院备注说明 *</div>
+          <textarea
+            rows={6}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="请填写康复达标情况、居家训练计划、复诊安排、注意事项..."
+            className="w-full rounded-xl border bg-card p-3 text-[12px] outline-none focus:border-primary"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
