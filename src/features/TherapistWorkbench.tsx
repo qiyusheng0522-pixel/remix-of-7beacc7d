@@ -72,6 +72,10 @@ export function TherapistWorkbench() {
   const outpatientList = patients.filter((p) => p.department === "outpatient" && p.status === "rehab");
   const myPatients = [...inpatientList, ...outpatientList];
   const tasks = todayTasks.therapist;
+  // 明日手术待治疗师确认（与手术团队同步）
+  const tomorrowSurgery = patients.filter((p) => p.status === "admitted" && p.preOpFindings);
+  const [surgConfirms, setSurgConfirms] = useState<Record<string, "ack" | undefined>>({});
+  const surgPending = tomorrowSurgery.filter((p) => !surgConfirms[p.id]).length;
 
   const showToast = (t: string) => {
     setToast(t);
