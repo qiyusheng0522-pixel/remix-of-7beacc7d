@@ -16,8 +16,20 @@ import type { Patient } from "@/lib/types";
 import { getArchive } from "@/lib/mock-records";
 import { addNote, usePatientNotes, type PatientNote } from "@/lib/patient-notes";
 
-export function PatientArchiveSheet({ patient, onClose }: { patient: Patient; onClose: () => void }) {
+export function PatientArchiveSheet({
+  patient,
+  onClose,
+  selfRole = "护士",
+  selfName = "我",
+}: {
+  patient: Patient;
+  onClose: () => void;
+  selfRole?: PatientNote["role"];
+  selfName?: string;
+}) {
   const arc = getArchive(patient.id);
+  const notes = usePatientNotes(patient.id);
+  const [adding, setAdding] = useState(false);
   return (
     <Sheet onClose={onClose} title="患者档案">
       <div className="space-y-3 p-3">
@@ -28,11 +40,16 @@ export function PatientArchiveSheet({ patient, onClose }: { patient: Patient; on
               {patient.name.slice(0, 1)}
             </div>
             <div className="flex-1">
-              <div className="text-sm font-bold">
+              <div className="flex flex-wrap items-center gap-1 text-sm font-bold">
                 {patient.name}
-                <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
+                <span className="text-[10px] font-normal text-muted-foreground">
                   {patient.gender} · {patient.age}岁 · {patient.bedNo ? `${patient.bedNo}床` : "门诊"}
                 </span>
+                {patient.side && (
+                  <span className="rounded-md bg-warning/20 px-1.5 py-0.5 text-[10px] font-bold text-warning-foreground">
+                    患侧 · {patient.side}侧
+                  </span>
+                )}
               </div>
               <div className="mt-0.5 font-mono text-[10px] text-muted-foreground">{patient.outpatientId}</div>
             </div>
@@ -40,9 +57,53 @@ export function PatientArchiveSheet({ patient, onClose }: { patient: Patient; on
           <div className="mt-2 grid grid-cols-2 gap-2 text-[10px]">
             <Field label="主诊断" value={patient.diagnosis} />
             <Field label="拟行术式" value={patient.surgeryName ?? "—"} />
+            <Field label="患侧" value={patient.side ? `${patient.side}侧` : "—"} />
             <Field label="主任" value={patient.director} />
             <Field label="责任治疗师" value={patient.responsibleTherapist ?? "—"} />
+            <Field label="责任医生" value={patient.responsibleDoctor ?? "—"} />
           </div>
+        </div>
+
+        {/* 跨角色共享备注 */}
+        <SectionTitle icon={StickyNote} text="患者备注（跨角色共享）" tone="text-info" />
+        <div className="space-y-1.5">
+          {notes.length === 0 && (
+            <div className="rounded-xl border bg-card p-3 text-center text-[11px] text-muted-foreground">
+              暂无备注
+            </div>
+          )}
+          {notes.map((n) => (
+            <div key={n.id} className="rounded-xl border bg-card p-2.5">
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                <span className="rounded-full bg-info/10 px-1.5 py-0.5 text-info">
+                  {n.role} · {n.author}
+                </span>
+                <span>{n.createdAt}</span>
+              </div>
+              {n.category && (
+                <div className="mt-1 inline-block rounded bg-warning/20 px-1.5 py-0.5 text-[9px] font-medium text-warning-foreground">
+                  {n.category}
+                </div>
+              )}
+              <div className="mt-1 text-[12px] leading-relaxed">{n.text}</div>
+            </div>
+          ))}
+          {!adding ? (
+            <button
+              onClick={() => setAdding(true)}
+              className="flex w-full items-center justify-center gap-1 rounded-xl border border-dashed py-2 text-[11px] text-info active:bg-info/5"
+            >
+              <Plus className="h-3 w-3" />添加备注（{selfRole}）
+            </button>
+          ) : (
+            <NoteAdder
+              onCancel={() => setAdding(false)}
+              onSave={(text, category) => {
+                addNote({ patientId: patient.id, role: selfRole, author: selfName, text, category });
+                setAdding(false);
+              }}
+            />
+          )}
         </div>
 
         {/* 过敏 + 既往史 */}
