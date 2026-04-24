@@ -79,7 +79,7 @@ export function TherapistWorkbench() {
   const tasks = todayTasks.therapist;
   // 明日手术待治疗师确认（与手术团队同步）
   const tomorrowSurgery = patients.filter((p) => p.status === "admitted" && p.preOpFindings);
-  const [surgConfirms, setSurgConfirms] = useState<Record<string, "ack" | undefined>>({});
+  const [surgConfirms, setSurgConfirms] = useState<Record<string, SurgDecision | undefined>>({});
   const surgPending = tomorrowSurgery.filter((p) => !surgConfirms[p.id]).length;
 
   const showToast = (t: string) => {
@@ -203,17 +203,7 @@ export function TherapistWorkbench() {
           selfName="朱年鑫"
         />
       )}
-      {overlay?.kind === "surg-confirm" && (
-        <SurgConfirmSheet
-          list={tomorrowSurgery}
-          confirms={surgConfirms}
-          onClose={() => setOverlay(null)}
-          onAck={(p) => {
-            setSurgConfirms((s) => ({ ...s, [p.id]: "ack" }));
-            showToast(`已确认收到术前量表：${p.name}`);
-          }}
-        />
-      )}
+      {/* 手术确认现已作为独立 Tab，不再作为 overlay */}
       {overlay?.kind === "discharge" && (
         <DischargeSheet
           patient={overlay.patient}
