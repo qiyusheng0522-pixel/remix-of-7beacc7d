@@ -129,7 +129,6 @@ export function TherapistWorkbench() {
       {tab === "records" && (
         <RecordsTab
           inpatientList={inpatientList}
-          outpatientList={outpatientList}
           onSelect={(p) => setActionPatient(p)}
           onAssess={(p) => showToast(`正在为 ${p.name} 进行康复评估...`)}
           onAddRecord={(p) => setRecordFor(p)}
