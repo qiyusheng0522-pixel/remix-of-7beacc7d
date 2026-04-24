@@ -212,13 +212,20 @@ export function PatientChatSheet({
 
       {/* 输入区 */}
       <div className="border-t bg-card px-2 py-2">
-        <div className="mb-1.5 flex gap-1">
+        <div className="mb-1.5 flex flex-wrap gap-1">
           <button
-            onClick={() => setEduOpen(true)}
+            onClick={() => setPicker("edu")}
             className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary active:opacity-80"
           >
             <BellRing className="h-2.5 w-2.5" />
             发送宣教
+          </button>
+          <button
+            onClick={() => setPicker("package")}
+            className="flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning-foreground active:opacity-80"
+          >
+            <Package className="h-2.5 w-2.5" />
+            服务包
           </button>
           {!aiHosting && (
             <button
@@ -258,6 +265,85 @@ export function PatientChatSheet({
           >
             <Send className="h-3.5 w-3.5" />
           </button>
+        </div>
+      </div>
+
+      {picker && (
+        <QuickSendPicker
+          kind={picker}
+          patientName={patient.name}
+          onClose={() => setPicker(null)}
+          onSelect={(t, d) => sendQuickItem(picker, t, d)}
+        />
+      )}
+    </div>
+  );
+}
+
+const EDU_ITEMS = [
+  { title: "术前一日宣教", desc: "皮肤准备 / 8 小时禁食 / 心理准备" },
+  { title: "术后康复指导", desc: "踝泵 / SLR / 体位摆放" },
+  { title: "DVT 预防宣教", desc: "下肢活动 / 弹力袜 / 抗凝注意" },
+  { title: "出院随访注意事项", desc: "复查时间 / 用药 / 饮食" },
+  { title: "膝关节屈伸训练", desc: "0-90° 渐进 / 每日 3 组" },
+];
+
+const PACKAGE_ITEMS = [
+  { title: "术后基础康复包（30 天）", desc: "包含 8 次居家随访、康复方案、视频指导" },
+  { title: "ACL 重建专项包（90 天）", desc: "ROM 训练 / 力量恢复 / 运动回归测试" },
+  { title: "TKA 术后康复包（60 天）", desc: "屈膝训练 / 步态矫正 / 上下楼梯" },
+  { title: "肩袖修复康复包（90 天）", desc: "被动活动 / 主动活动 / 抗阻训练" },
+  { title: "居家随访服务（按月）", desc: "每周 2 次电话 + 1 次视频回访" },
+];
+
+function QuickSendPicker({
+  kind,
+  patientName,
+  onClose,
+  onSelect,
+}: {
+  kind: "edu" | "package";
+  patientName: string;
+  onClose: () => void;
+  onSelect: (title: string, desc: string) => void;
+}) {
+  const isEdu = kind === "edu";
+  const items = isEdu ? EDU_ITEMS : PACKAGE_ITEMS;
+  return (
+    <div className="absolute inset-0 z-[60] flex flex-col bg-black/40" onClick={onClose}>
+      <div className="mt-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="rounded-t-3xl bg-card p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              {isEdu ? (
+                <BellRing className="h-3.5 w-3.5 text-primary" />
+              ) : (
+                <Package className="h-3.5 w-3.5 text-warning-foreground" />
+              )}
+              <div className="text-[13px] font-semibold">
+                选择{isEdu ? "宣教内容" : "服务包"}
+              </div>
+              <span className="text-[10px] text-muted-foreground">→ {patientName}</span>
+            </div>
+            <button onClick={onClose} className="rounded-full p-1 active:bg-muted/40">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="max-h-[60vh] space-y-1.5 overflow-y-auto">
+            {items.map((it) => (
+              <button
+                key={it.title}
+                onClick={() => onSelect(it.title, it.desc)}
+                className="flex w-full items-start justify-between gap-2 rounded-xl border bg-card p-2.5 text-left active:bg-muted/40"
+              >
+                <div className="min-w-0">
+                  <div className="text-[12px] font-medium">{it.title}</div>
+                  <div className="mt-0.5 text-[10px] text-muted-foreground">{it.desc}</div>
+                </div>
+                <Send className="mt-1 h-3.5 w-3.5 shrink-0 text-primary" />
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>
