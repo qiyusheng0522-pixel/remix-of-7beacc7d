@@ -59,6 +59,7 @@ export function SurgicalTeamWorkbench() {
             { key: "home", label: "首页", icon: Home, badge: tasks.length },
             { key: "preop", label: "手术确认", icon: Calendar, badge: tomorrowSurgery.length },
             { key: "intraop", label: "术中量表", icon: ClipboardEdit, badge: todaySurgery.length },
+            { key: "chat", label: "患者沟通", icon: MessageCircle, badge: 3 },
             { key: "me", label: "我的", icon: User },
           ]}
         />
