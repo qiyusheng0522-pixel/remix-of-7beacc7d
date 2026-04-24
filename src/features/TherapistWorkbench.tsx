@@ -159,10 +159,17 @@ export function TherapistWorkbench() {
         />
       )}
       {overlay?.kind === "chat" && (
-        <PatientChatSheet patient={overlay.patient} onClose={() => setOverlay(null)} selfRole="治" />
+        <PatientChatSheet
+          patient={overlay.patient}
+          onClose={() => setOverlay(null)}
+          selfRole="治"
+        />
       )}
       {overlay?.kind === "archive" && (
-        <PatientArchiveSheet patient={overlay.patient} onClose={() => setOverlay(null)} />
+        <PatientArchiveSheet
+          patient={overlay.patient}
+          onClose={() => setOverlay(null)}
+        />
       )}
       {overlay?.kind === "patient-list" && (
         <PatientListSheet
