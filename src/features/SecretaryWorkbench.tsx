@@ -515,6 +515,7 @@ function MiniBlock({ label, value, tone }: { label: string; value: number; tone:
   );
 }
 
+function MeTab({ name, role }: { name: string; role: string }) {
   const weeklyAdmission = [
     { label: "周一", value: 6 },
     { label: "周二", value: 8 },
