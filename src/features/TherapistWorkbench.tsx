@@ -160,6 +160,8 @@ export function TherapistWorkbench() {
       )}
       {overlay?.kind === "chat" && (
         <PatientChatSheet patient={overlay.patient} onClose={() => setOverlay(null)} selfRole="治" />
+      {overlay?.kind === "archive" && (
+        <PatientArchiveSheet patient={overlay.patient} onClose={() => setOverlay(null)} />
       )}
       {overlay?.kind === "patient-list" && (
         <PatientListSheet
@@ -196,34 +198,79 @@ export function TherapistWorkbench() {
 
 function HomeTab({
   tasks,
-  myCount,
-  aiDraftCount,
+  inpatientCount,
+  outpatientCount,
+  planPendingCount,
+  assessPendingCount,
+  chatPendingCount,
+  onOpenPatients,
+  onOpenPlans,
+  onOpenRecords,
   onQuick,
 }: {
   tasks: typeof todayTasks.therapist;
-  myCount: number;
-  aiDraftCount: number;
+  inpatientCount: number;
+  outpatientCount: number;
+  planPendingCount: number;
+  assessPendingCount: number;
+  chatPendingCount: number;
+  onOpenPatients: () => void;
+  onOpenPlans: () => void;
+  onOpenRecords: () => void;
   onQuick: (l: string) => void;
 }) {
+  const totalPatients = inpatientCount + outpatientCount;
   return (
     <div className="space-y-3 p-3">
       <div className="rounded-2xl p-4 text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
         <div className="text-[10px] opacity-80">康复治疗师 · 工作概览</div>
         <div className="mt-1 text-base font-bold">朱年鑫, 加油 💪</div>
         <div className="mt-0.5 text-[11px] opacity-90">
-          负责康复 {myCount} 例, AI 方案待确认 {aiDraftCount} 份
+          负责康复 {totalPatients} 例（住院 {inpatientCount} · 门诊 {outpatientCount}）, 待办 {tasks.length} 项
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <MiniStat label="负责康复中" value={myCount} />
-          <MiniStat label="AI 方案待确认" value={aiDraftCount} />
+          <MiniStat label="负责康复中" value={totalPatients} />
+          <MiniStat label="待处理总计" value={planPendingCount + assessPendingCount + chatPendingCount} />
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-2 rounded-2xl border bg-card p-3">
-        <QuickAction icon={Sparkles} label="AI 方案" tone="bg-info/15 text-info" onClick={() => onQuick("AI 方案")} />
-        <QuickAction icon={ClipboardCheck} label="康复评估" tone="bg-primary/15 text-primary" onClick={() => onQuick("康复评估")} />
-        <QuickAction icon={FileText} label="院内记录" tone="bg-success/15 text-success" onClick={() => onQuick("院内记录")} />
-        <QuickAction icon={CheckCircle2} label="出院评估" tone="bg-warning/20 text-warning-foreground" onClick={() => onQuick("出院评估")} />
+      {/* 4 个工作台统计入口 */}
+      <div className="grid grid-cols-2 gap-2">
+        <StatEntry
+          icon={Users}
+          label="患者管理"
+          sub={`住院 ${inpatientCount} · 门诊 ${outpatientCount}`}
+          value={totalPatients}
+          tone="bg-info/10 text-info"
+          onClick={onOpenPatients}
+        />
+        <StatEntry
+          icon={HeartPulse}
+          label="康复方案"
+          sub={planPendingCount > 0 ? `${planPendingCount} 份待确认` : "全部已确认"}
+          value={planPendingCount}
+          badge={planPendingCount > 0}
+          tone="bg-primary/10 text-primary"
+          onClick={onOpenPlans}
+        />
+        <StatEntry
+          icon={ClipboardCheck}
+          label="康复评估"
+          sub={assessPendingCount > 0 ? `${assessPendingCount} 项待评估` : "今日已完成"}
+          value={assessPendingCount}
+          badge={assessPendingCount > 0}
+          tone="bg-warning/15 text-warning-foreground"
+          onClick={onOpenRecords}
+        />
+        <StatEntry
+          icon={MessageCircle}
+          label="患者沟通"
+          sub={chatPendingCount > 0 ? `${chatPendingCount} 条未回复` : "无待回复"}
+          value={chatPendingCount}
+          badge={chatPendingCount > 0}
+          tone="bg-success/15 text-success"
+          onClick={onOpenPatients}
+        />
       </div>
 
       <Card title="今日待办" rightLabel={`${tasks.length} 项`}>
@@ -265,6 +312,47 @@ function HomeTab({
         </div>
       </Card>
     </div>
+  );
+}
+
+function StatEntry({
+  icon: Icon,
+  label,
+  sub,
+  value,
+  badge,
+  tone,
+  onClick,
+}: {
+  icon: React.ElementType;
+  label: string;
+  sub: string;
+  value: number;
+  badge?: boolean;
+  tone: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="relative flex items-center gap-2.5 rounded-2xl border bg-card p-3 text-left active:bg-muted/30"
+      style={{ boxShadow: "var(--shadow-card)" }}
+    >
+      <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl", tone)}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1">
+          <span className="text-[12px] font-semibold">{label}</span>
+          {badge && value > 0 && (
+            <span className="rounded-full bg-destructive px-1.5 py-0.5 text-[9px] font-bold text-destructive-foreground">
+              {value}
+            </span>
+          )}
+        </div>
+        <div className="mt-0.5 truncate text-[10px] text-muted-foreground">{sub}</div>
+      </div>
+    </button>
   );
 }
 
