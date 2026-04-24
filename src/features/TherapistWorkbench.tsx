@@ -490,49 +490,33 @@ function PlansTab({
 
 function RecordsTab({
   inpatientList,
-  outpatientList,
   onSelect,
   onAssess,
   onAddRecord,
   onDischarge,
 }: {
   inpatientList: Patient[];
-  outpatientList: Patient[];
   onSelect: (p: Patient) => void;
   onAssess: (p: Patient) => void;
   onAddRecord: (p: Patient) => void;
   onDischarge: (p: Patient) => void;
 }) {
-  const [sub, setSub] = useState<"inpatient" | "outpatient">("inpatient");
-  const list = sub === "inpatient" ? inpatientList : outpatientList;
+  const list = inpatientList;
 
   return (
     <div className="space-y-3 p-3">
-      {/* 子分段：住院 / 门诊 */}
-      <div className="grid grid-cols-2 overflow-hidden rounded-full border bg-muted/30 p-0.5 text-[12px]">
-        <button
-          onClick={() => setSub("inpatient")}
-          className={cn(
-            "rounded-full py-1.5 font-medium transition-colors",
-            sub === "inpatient" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
-          )}
-        >
-          住院 · {inpatientList.length}
-        </button>
-        <button
-          onClick={() => setSub("outpatient")}
-          className={cn(
-            "rounded-full py-1.5 font-medium transition-colors",
-            sub === "outpatient" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
-          )}
-        >
-          门诊 · {outpatientList.length}
-        </button>
+      <div className="rounded-2xl border bg-info/5 p-2.5 text-[11px] text-info">
+        <ClipboardCheck className="mr-1 inline h-3 w-3" />
+        院内评估仅记录住院患者；门诊患者的康复记录请在「患者管理 → 患者档案」中查看。
+      </div>
+
+      <div className="flex items-center justify-between px-1">
+        <div className="text-[12px] font-semibold">住院康复 · {list.length} 例</div>
       </div>
 
       {list.length === 0 && (
         <div className="rounded-2xl border bg-card p-6 text-center text-[12px] text-muted-foreground">
-          暂无{sub === "inpatient" ? "住院" : "门诊"}康复患者
+          暂无住院康复患者
         </div>
       )}
 
