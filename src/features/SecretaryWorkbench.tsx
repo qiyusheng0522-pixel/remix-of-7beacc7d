@@ -50,6 +50,10 @@ export function SecretaryWorkbench() {
 
   const pendingAdmission = patients.filter((p) => p.status === "outpatient-pending");
   const inpatientPatients = patients.filter((p) => p.department === "inpatient");
+  const followUpPatients = patients.filter(
+    (p) => p.status === "follow-up" || p.status === "post-op" || p.status === "rehab",
+  );
+  const followUpPending = followUpPatients.filter((p) => p.followUpStatus !== "done");
   const tasks = todayTasks.secretary;
 
   const showToast = (t: string) => {
