@@ -33,10 +33,13 @@ export function SurgicalTeamWorkbench() {
   const [decisions, setDecisions] = useState<Record<string, Decision | undefined>>({});
   const [reasonFor, setReasonFor] = useState<{ patient: Patient; decision: "hold" | "return" } | null>(null);
   const [intraOpFor, setIntraOpFor] = useState<Patient | null>(null);
+  const [chatPatient, setChatPatient] = useState<Patient | null>(null);
+  const [showPatientList, setShowPatientList] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const tomorrowSurgery = patients.filter((p) => p.status === "admitted" && p.preOpFindings);
   const todaySurgery = patients.filter((p) => p.status === "in-surgery");
+  const myPatients = patients.filter((p) => p.director === "王主任");
   const tasks = todayTasks["surgical-team"];
 
   const showToast = (t: string) => {
