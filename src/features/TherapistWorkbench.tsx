@@ -14,6 +14,8 @@ import {
   MessageCircle,
   FileSearch,
   PlusCircle,
+  Mic,
+  Save,
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { Card, MiniStat, QuickAction } from "./SecretaryWorkbench";
