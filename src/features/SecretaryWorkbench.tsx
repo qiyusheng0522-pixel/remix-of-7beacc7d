@@ -36,7 +36,7 @@ type Overlay =
   | { kind: "archive"; patient: Patient }
   | { kind: "vitals"; patient: Patient }
   | { kind: "handover" }
-  | { kind: "education"; candidates: Patient[] }
+  | { kind: "education"; candidates: Patient[]; lockSinglePatient?: boolean }
   | null;
 
 export function SecretaryWorkbench() {
@@ -103,7 +103,7 @@ export function SecretaryWorkbench() {
           list={pendingAdmission}
           onChat={(p) => setOverlay({ kind: "chat", patient: p })}
           onArchive={(p) => setOverlay({ kind: "archive", patient: p })}
-          onEducation={(p) => setOverlay({ kind: "education", candidates: [p] })}
+          onEducation={(p) => setOverlay({ kind: "education", candidates: [p], lockSinglePatient: true })}
           onBatchEducation={() => setOverlay({ kind: "education", candidates: pendingAdmission })}
         />
       )}
@@ -127,7 +127,12 @@ export function SecretaryWorkbench() {
       )}
       {overlay?.kind === "handover" && <HandoverSheet onClose={() => setOverlay(null)} />}
       {overlay?.kind === "education" && (
-        <EducationPushSheet candidates={overlay.candidates} onClose={() => setOverlay(null)} onPush={showToast} />
+        <EducationPushSheet
+          candidates={overlay.candidates}
+          lockSinglePatient={overlay.lockSinglePatient}
+          onClose={() => setOverlay(null)}
+          onPush={showToast}
+        />
       )}
 
       <ActionSheet
@@ -138,7 +143,7 @@ export function SecretaryWorkbench() {
           { label: "在线沟通（含电话/档案）", tone: "primary", onClick: () => actionPatient && setOverlay({ kind: "chat", patient: actionPatient }) },
           { label: "查看患者档案", onClick: () => actionPatient && setOverlay({ kind: "archive", patient: actionPatient }) },
           { label: "录入住院指标（DVT/生命体征）", onClick: () => actionPatient && setOverlay({ kind: "vitals", patient: actionPatient }) },
-          { label: "推送宣教内容", onClick: () => actionPatient && setOverlay({ kind: "education", candidates: [actionPatient] }) },
+          { label: "推送宣教内容", onClick: () => actionPatient && setOverlay({ kind: "education", candidates: [actionPatient], lockSinglePatient: true }) },
         ]}
       />
       {toast && <ToastBanner text={toast} />}
