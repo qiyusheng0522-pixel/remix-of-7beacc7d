@@ -159,12 +159,16 @@ function HomeTab({
   inpatientCount,
   onQuick,
   onTask,
+  onJumpOutpatient,
+  onJumpInpatient,
 }: {
   tasks: typeof todayTasks.secretary;
   pendingCount: number;
   inpatientCount: number;
   onQuick: (key: "ocr" | "handover" | "vitals" | "education") => void;
   onTask: (taskType: string) => void;
+  onJumpOutpatient: () => void;
+  onJumpInpatient: () => void;
 }) {
   return (
     <div className="space-y-3 p-3">
@@ -177,8 +181,12 @@ function HomeTab({
         <div className="mt-0.5 text-[11px] opacity-90">今日 {tasks.length} 项待办 · 2 例办理入院</div>
 
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <MiniStat label="门诊待入院" value={pendingCount} />
-          <MiniStat label="在院患者" value={inpatientCount} />
+          <button onClick={onJumpOutpatient} className="text-left active:opacity-80">
+            <MiniStat label="门诊待入院 ›" value={pendingCount} />
+          </button>
+          <button onClick={onJumpInpatient} className="text-left active:opacity-80">
+            <MiniStat label="在院患者 ›" value={inpatientCount} />
+          </button>
         </div>
       </div>
 
@@ -282,13 +290,8 @@ function OutpatientTab({
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-bold">{p.name}</span>
                   <span className="text-[10px] text-muted-foreground">
-                    {p.gender} · {p.age}岁
+                  {p.gender} · {p.age}岁
                   </span>
-                  {p.urgent && (
-                    <span className="rounded bg-destructive/15 px-1 py-0.5 text-[9px] font-bold text-destructive">
-                      加急
-                    </span>
-                  )}
                 </div>
                 <div className="mt-1 text-[11px] text-foreground">{p.diagnosis}</div>
                 <div className="text-[10px] text-muted-foreground">拟行: {p.surgeryName} · {p.director}</div>
@@ -306,6 +309,13 @@ function OutpatientTab({
                 <FileSearch className="h-3 w-3" />档案
               </button>
               <div className="flex gap-1.5">
+                <a
+                  href={`tel:${(p.phone ?? "").replace(/\D/g, "")}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-[10px] text-foreground active:bg-muted/70"
+                >
+                  <Phone className="h-3 w-3" />电话
+                </a>
                 <button
                   onClick={() => onEducation(p)}
                   className="flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-[10px] text-foreground active:bg-muted/70"
