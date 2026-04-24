@@ -22,6 +22,7 @@ import { Card, MiniStat, QuickAction } from "./SecretaryWorkbench";
 import { BarChart, ChartCard, HBarRow, LineChart, StatTile } from "@/components/WorkStats";
 import { PatientChatSheet } from "@/components/PatientChatSheet";
 import { PatientArchiveSheet } from "@/components/PatientArchiveSheet";
+import { PatientListSheet } from "@/components/PatientListSheet";
 import { RehabRecordSheet } from "@/components/RehabRecordSheet";
 import { ActionSheet, ToastBanner } from "@/components/ActionSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
@@ -29,7 +30,11 @@ import type { Patient } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type TabKey = "home" | "plans" | "records" | "me";
-type Overlay = { kind: "chat"; patient: Patient } | { kind: "archive"; patient: Patient } | null;
+type Overlay =
+  | { kind: "chat"; patient: Patient }
+  | { kind: "archive"; patient: Patient }
+  | { kind: "patient-list" }
+  | null;
 
 // AI 生成的康复方案（模拟）
 const aiRehabPlan = (patient: Patient) => ({
@@ -83,7 +88,7 @@ export function TherapistWorkbench() {
           items={[
             { key: "home", label: "首页", icon: Home, badge: tasks.length },
             { key: "plans", label: "康复方案", icon: HeartPulse, badge: myPatients.filter((p) => planStatuses[p.id] === "ai-draft").length },
-            { key: "records", label: "院内记录", icon: FileText, badge: myPatients.length },
+            { key: "records", label: "院内评估", icon: FileText, badge: inpatientList.length },
             { key: "me", label: "我的", icon: User },
           ]}
         />
@@ -92,8 +97,14 @@ export function TherapistWorkbench() {
       {tab === "home" && (
         <HomeTab
           tasks={tasks}
-          myCount={myPatients.length}
-          aiDraftCount={myPatients.filter((p) => planStatuses[p.id] === "ai-draft").length}
+          inpatientCount={inpatientList.length}
+          outpatientCount={outpatientList.length}
+          planPendingCount={myPatients.filter((p) => planStatuses[p.id] === "ai-draft").length}
+          assessPendingCount={tasks.filter((t) => t.type === "preop-confirm" || t.type === "discharge").length}
+          chatPendingCount={3}
+          onOpenPatients={() => setOverlay({ kind: "patient-list" })}
+          onOpenPlans={() => setTab("plans")}
+          onOpenRecords={() => setTab("records")}
           onQuick={(l) => showToast(`已打开 ${l}`)}
         />
       )}
