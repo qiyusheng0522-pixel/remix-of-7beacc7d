@@ -13,16 +13,19 @@ import {
   ArrowLeft,
   Send,
   RotateCcw,
+  MessageCircle,
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { Card, MiniStat, QuickAction } from "./SecretaryWorkbench";
 import { BarChart, ChartCard, DonutChart, StatTile } from "@/components/WorkStats";
 import { ToastBanner } from "@/components/ActionSheet";
+import { PatientChatSheet } from "@/components/PatientChatSheet";
+import { PatientListSheet } from "@/components/PatientListSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type TabKey = "home" | "preop" | "intraop" | "me";
+type TabKey = "home" | "preop" | "intraop" | "chat" | "me";
 type Decision = "go" | "hold" | "return";
 
 export function SurgicalTeamWorkbench() {
