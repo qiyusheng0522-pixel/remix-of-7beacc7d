@@ -573,19 +573,19 @@ function MeTab() {
       </div>
 
       <ChartCard title="本周方案处理量" subtitle="共 35 份 · AI 直接采纳 28 份">
-        <BarChart data={weeklyPlan} unit="份" color="hsl(var(--info))" />
+        <BarChart data={weeklyPlan} unit="份" color="var(--info)" />
       </ChartCard>
 
       <ChartCard title="康复达标率趋势" subtitle="近 4 个月">
-        <LineChart data={reachRate} stroke="hsl(var(--success))" />
+        <LineChart data={reachRate} stroke="var(--success)" />
       </ChartCard>
 
       <ChartCard title="工作类型占比（本月）">
         <div className="space-y-2">
-          <HBarRow label="AI 方案确认" value={35} total={108} color="hsl(var(--info))" />
-          <HBarRow label="康复评估" value={48} total={108} color="hsl(var(--primary))" />
-          <HBarRow label="出院评估" value={18} total={108} color="hsl(var(--success))" />
-          <HBarRow label="方案修订" value={7} total={108} color="hsl(var(--warning))" />
+          <HBarRow label="AI 方案确认" value={35} total={108} color="var(--info)" />
+          <HBarRow label="康复评估" value={48} total={108} color="var(--primary)" />
+          <HBarRow label="出院评估" value={18} total={108} color="var(--success)" />
+          <HBarRow label="方案修订" value={7} total={108} color="var(--warning)" />
         </div>
       </ChartCard>
 

@@ -494,14 +494,14 @@ function MeTab() {
       </div>
 
       <ChartCard title="近 4 个月手术量" subtitle="共 107 例 · 成功率 100%">
-        <BarChart data={monthlySurgery} unit="例" color="hsl(var(--primary))" />
+        <BarChart data={monthlySurgery} unit="例" color="var(--primary)" />
       </ChartCard>
 
       <ChartCard title="手术决策分布（本月）">
         <div className="flex items-center justify-around py-2">
-          <DonutChart value={88} label="如期手术" color="hsl(var(--success))" />
-          <DonutChart value={8} label="暂缓" color="hsl(var(--warning))" />
-          <DonutChart value={4} label="退回" color="hsl(var(--destructive))" />
+          <DonutChart value={88} label="如期手术" color="var(--success)" />
+          <DonutChart value={8} label="暂缓" color="var(--warning)" />
+          <DonutChart value={4} label="退回" color="var(--destructive)" />
         </div>
       </ChartCard>
 

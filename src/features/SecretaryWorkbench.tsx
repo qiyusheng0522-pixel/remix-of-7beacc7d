@@ -410,10 +410,10 @@ function MeTab({ name, role }: { name: string; role: string }) {
 
       <ChartCard title="工作分布（本月）">
         <div className="space-y-2">
-          <HBarRow label="入院办理" value={42} total={320} color="hsl(var(--primary))" />
-          <HBarRow label="宣教推送" value={86} total={320} color="hsl(var(--success))" />
-          <HBarRow label="电话沟通" value={124} total={320} color="hsl(var(--info))" />
-          <HBarRow label="指标录入" value={68} total={320} color="hsl(var(--warning))" />
+          <HBarRow label="入院办理" value={42} total={320} color="var(--primary)" />
+          <HBarRow label="宣教推送" value={86} total={320} color="var(--success)" />
+          <HBarRow label="电话沟通" value={124} total={320} color="var(--info)" />
+          <HBarRow label="指标录入" value={68} total={320} color="var(--warning)" />
         </div>
       </ChartCard>
 
