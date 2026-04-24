@@ -236,13 +236,7 @@ function HomeTab({
         <div className="text-[10px] opacity-80">康复治疗师 · 工作概览</div>
         <div className="mt-1 text-base font-bold">朱年鑫, 加油 💪</div>
         <div className="mt-0.5 text-[11px] opacity-90">
-          负责康复 {totalPatients} 例（住院 {inpatientCount} · 门诊 {outpatientCount}）, 待办 {tasks.length} 项
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <MiniStat label="负责康复中" value={totalPatients} />
-          <button onClick={onOpenRecords} className="text-left active:opacity-80">
-            <MiniStat label="待处理总计 ›" value={planPendingCount + assessPendingCount + chatPendingCount} />
-          </button>
+          住院 {inpatientCount} · 门诊 {outpatientCount} · 今日待办 {tasks.length} 项
         </div>
       </div>
 
