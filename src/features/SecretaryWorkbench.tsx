@@ -83,6 +83,7 @@ export function SecretaryWorkbench() {
             { key: "home", label: "首页", icon: Home, badge: tasks.length },
             { key: "outpatient", label: "门诊", icon: Hospital, badge: pendingAdmission.length },
             { key: "inpatient", label: "住院", icon: BedDouble },
+            { key: "followup", label: "随访", icon: HeartPulse, badge: followUpPending.length },
             { key: "me", label: "我的", icon: User },
           ]}
         />
@@ -93,18 +94,20 @@ export function SecretaryWorkbench() {
           tasks={tasks}
           pendingCount={pendingAdmission.length}
           inpatientCount={inpatientPatients.length}
+          followUpCount={followUpPending.length}
           onQuick={(key) => {
             if (key === "handover") setOverlay({ kind: "handover" });
             else if (key === "education") setOverlay({ kind: "education", candidates: [...pendingAdmission, ...inpatientPatients] });
             else if (key === "ocr") showToast("OCR 识别：化验单 / 入院单 / 电子病历");
-          else if (key === "vitals") {
-              // 跳转到住院列表录入指标，无患者则不跳
+            else if (key === "followup") setTab("followup");
+            else if (key === "vitals") {
               if (inpatientPatients.length > 0) setTab("inpatient");
             }
           }}
           onTask={handleTaskClick}
           onJumpOutpatient={() => setTab("outpatient")}
           onJumpInpatient={() => setTab("inpatient")}
+          onJumpFollowUp={() => setTab("followup")}
         />
       )}
       {tab === "outpatient" && (
