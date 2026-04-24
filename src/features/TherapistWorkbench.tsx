@@ -498,42 +498,120 @@ function RecordsTab({
 
 function PlanEditorSheet({ patient, onClose, onSave }: { patient: Patient; onClose: () => void; onSave: () => void }) {
   const plan = aiRehabPlan(patient);
+  const [goal, setGoal] = useState(plan.goal);
+  const [items, setItems] = useState<string[]>(plan.items);
+  const [precautions, setPrecautions] = useState<string>(plan.precautions.join("\n"));
+
   return (
-    <div className="absolute inset-0 z-30 flex flex-col bg-muted/40">
+    <div className="absolute inset-0 z-[60] flex flex-col bg-background">
       <div className="flex items-center justify-between border-b bg-card px-3 py-2.5">
-        <button onClick={onClose} className="text-[11px] text-muted-foreground">取消</button>
+        <button onClick={onClose} className="text-[12px] text-muted-foreground">取消</button>
         <div className="text-[13px] font-semibold">修改康复方案 · {patient.name}</div>
-        <button onClick={onSave} className="text-[11px] font-bold text-primary">保存</button>
+        <button
+          onClick={onSave}
+          className="flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-[11px] font-medium text-primary-foreground active:opacity-90"
+        >
+          <Save className="h-3 w-3" />保存
+        </button>
       </div>
-      <div className="flex-1 space-y-3 overflow-y-auto p-3">
-        <div>
+
+      <div className="flex-1 space-y-3 overflow-y-auto bg-muted/20 p-3">
+        <div className="rounded-2xl border bg-info/5 p-2.5 text-[11px] text-info">
+          <Sparkles className="mr-1 inline h-3 w-3" />
+          所有字段支持语音输入，按住右侧"麦克风"图标说话即可。
+        </div>
+
+        <div className="rounded-2xl border bg-card p-3">
           <div className="mb-1 text-[10px] font-medium text-muted-foreground">康复目标</div>
-          <textarea
+          <VoiceTextarea
             rows={2}
-            defaultValue={plan.goal}
-            className="w-full rounded-lg border bg-card p-2 text-[12px] outline-none focus:border-primary"
+            value={goal}
+            onChange={setGoal}
+            voiceSample={`${patient.surgeryName ?? "术后"} · 14 日内屈膝 ≥110°，独立行走 100m，可上下楼梯`}
           />
         </div>
-        <div>
+
+        <div className="rounded-2xl border bg-card p-3">
           <div className="mb-1 text-[10px] font-medium text-muted-foreground">每日训练计划</div>
-          {plan.items.map((it, i) => (
-            <textarea
-              key={i}
-              rows={2}
-              defaultValue={it}
-              className="mb-1.5 w-full rounded-lg border bg-card p-2 text-[11px] outline-none focus:border-primary"
-            />
+          {items.map((it, i) => (
+            <div key={i} className="mb-1.5">
+              <VoiceTextarea
+                rows={2}
+                value={it}
+                onChange={(v) => setItems((arr) => arr.map((x, idx) => (idx === i ? v : x)))}
+                voiceSample="患者今日完成踝泵 30 次/h，被动屈膝 0-75°，无明显疼痛"
+                small
+              />
+            </div>
           ))}
+          <button
+            onClick={() => setItems((arr) => [...arr, ""])}
+            className="mt-1 flex w-full items-center justify-center gap-1 rounded-lg border border-dashed py-1.5 text-[11px] text-muted-foreground active:bg-muted/30"
+          >
+            <PlusCircle className="h-3 w-3" />新增一条训练
+          </button>
         </div>
-        <div>
+
+        <div className="rounded-2xl border bg-card p-3">
           <div className="mb-1 text-[10px] font-medium text-muted-foreground">注意事项</div>
-          <textarea
+          <VoiceTextarea
             rows={4}
-            defaultValue={plan.precautions.join("\n")}
-            className="w-full rounded-lg border bg-card p-2 text-[11px] outline-none focus:border-primary"
+            value={precautions}
+            onChange={setPrecautions}
+            voiceSample={"避免患肢负重 >50%\n如出现 38℃ 以上发热立即上报\n夜间睡眠保持患肢中立位"}
+            small
           />
         </div>
       </div>
+    </div>
+  );
+}
+
+function VoiceTextarea({
+  rows,
+  value,
+  onChange,
+  voiceSample,
+  small,
+}: {
+  rows: number;
+  value: string;
+  onChange: (v: string) => void;
+  voiceSample: string;
+  small?: boolean;
+}) {
+  const [recording, setRecording] = useState(false);
+  const triggerVoice = () => {
+    setRecording(true);
+    setTimeout(() => {
+      onChange(value ? `${value}\n${voiceSample}` : voiceSample);
+      setRecording(false);
+    }, 1200);
+  };
+  return (
+    <div>
+      <div className="flex items-start gap-1.5">
+        <textarea
+          rows={rows}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={cn(
+            "flex-1 rounded-lg border bg-muted/20 p-2 outline-none focus:border-primary",
+            small ? "text-[11px]" : "text-[12px]",
+          )}
+        />
+        <button
+          onClick={triggerVoice}
+          className={cn(
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border",
+            recording ? "animate-pulse bg-destructive text-destructive-foreground" : "bg-card text-muted-foreground active:bg-muted/40",
+          )}
+          aria-label="语音输入"
+        >
+          <Mic className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      {recording && <div className="mt-1 text-[10px] text-destructive">● 正在录音，自动转文字...</div>}
     </div>
   );
 }
