@@ -6,6 +6,7 @@ import {
   Home,
   HeartPulse,
   User,
+  Users,
   ChevronRight,
   Sparkles,
   Edit3,
@@ -22,6 +23,7 @@ import { Card, MiniStat, QuickAction } from "./SecretaryWorkbench";
 import { BarChart, ChartCard, HBarRow, LineChart, StatTile } from "@/components/WorkStats";
 import { PatientChatSheet } from "@/components/PatientChatSheet";
 import { PatientArchiveSheet } from "@/components/PatientArchiveSheet";
+import { PatientListSheet } from "@/components/PatientListSheet";
 import { RehabRecordSheet } from "@/components/RehabRecordSheet";
 import { ActionSheet, ToastBanner } from "@/components/ActionSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
@@ -29,7 +31,11 @@ import type { Patient } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type TabKey = "home" | "plans" | "records" | "me";
-type Overlay = { kind: "chat"; patient: Patient } | { kind: "archive"; patient: Patient } | null;
+type Overlay =
+  | { kind: "chat"; patient: Patient }
+  | { kind: "archive"; patient: Patient }
+  | { kind: "patient-list" }
+  | null;
 
 // AI 生成的康复方案（模拟）
 const aiRehabPlan = (patient: Patient) => ({
@@ -83,7 +89,7 @@ export function TherapistWorkbench() {
           items={[
             { key: "home", label: "首页", icon: Home, badge: tasks.length },
             { key: "plans", label: "康复方案", icon: HeartPulse, badge: myPatients.filter((p) => planStatuses[p.id] === "ai-draft").length },
-            { key: "records", label: "院内记录", icon: FileText, badge: myPatients.length },
+            { key: "records", label: "院内评估", icon: FileText, badge: inpatientList.length },
             { key: "me", label: "我的", icon: User },
           ]}
         />
@@ -92,8 +98,14 @@ export function TherapistWorkbench() {
       {tab === "home" && (
         <HomeTab
           tasks={tasks}
-          myCount={myPatients.length}
-          aiDraftCount={myPatients.filter((p) => planStatuses[p.id] === "ai-draft").length}
+          inpatientCount={inpatientList.length}
+          outpatientCount={outpatientList.length}
+          planPendingCount={myPatients.filter((p) => planStatuses[p.id] === "ai-draft").length}
+          assessPendingCount={tasks.filter((t) => t.type === "preop-confirm" || t.type === "discharge").length}
+          chatPendingCount={3}
+          onOpenPatients={() => setOverlay({ kind: "patient-list" })}
+          onOpenPlans={() => setTab("plans")}
+          onOpenRecords={() => setTab("records")}
           onQuick={(l) => showToast(`已打开 ${l}`)}
         />
       )}
@@ -117,7 +129,6 @@ export function TherapistWorkbench() {
       {tab === "records" && (
         <RecordsTab
           inpatientList={inpatientList}
-          outpatientList={outpatientList}
           onSelect={(p) => setActionPatient(p)}
           onAssess={(p) => showToast(`正在为 ${p.name} 进行康复评估...`)}
           onAddRecord={(p) => setRecordFor(p)}
@@ -153,6 +164,15 @@ export function TherapistWorkbench() {
       {overlay?.kind === "archive" && (
         <PatientArchiveSheet patient={overlay.patient} onClose={() => setOverlay(null)} />
       )}
+      {overlay?.kind === "patient-list" && (
+        <PatientListSheet
+          inpatientList={inpatientList}
+          outpatientList={outpatientList}
+          onClose={() => setOverlay(null)}
+          onArchive={(p) => setOverlay({ kind: "archive", patient: p })}
+          onChat={(p) => setOverlay({ kind: "chat", patient: p })}
+        />
+      )}
       <ActionSheet
         open={!!actionPatient}
         title={actionPatient ? `${actionPatient.name}${actionPatient.bedNo ? ` · ${actionPatient.bedNo}床` : " · 门诊"}` : ""}
@@ -179,34 +199,79 @@ export function TherapistWorkbench() {
 
 function HomeTab({
   tasks,
-  myCount,
-  aiDraftCount,
+  inpatientCount,
+  outpatientCount,
+  planPendingCount,
+  assessPendingCount,
+  chatPendingCount,
+  onOpenPatients,
+  onOpenPlans,
+  onOpenRecords,
   onQuick,
 }: {
   tasks: typeof todayTasks.therapist;
-  myCount: number;
-  aiDraftCount: number;
+  inpatientCount: number;
+  outpatientCount: number;
+  planPendingCount: number;
+  assessPendingCount: number;
+  chatPendingCount: number;
+  onOpenPatients: () => void;
+  onOpenPlans: () => void;
+  onOpenRecords: () => void;
   onQuick: (l: string) => void;
 }) {
+  const totalPatients = inpatientCount + outpatientCount;
   return (
     <div className="space-y-3 p-3">
       <div className="rounded-2xl p-4 text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
         <div className="text-[10px] opacity-80">康复治疗师 · 工作概览</div>
         <div className="mt-1 text-base font-bold">朱年鑫, 加油 💪</div>
         <div className="mt-0.5 text-[11px] opacity-90">
-          负责康复 {myCount} 例, AI 方案待确认 {aiDraftCount} 份
+          负责康复 {totalPatients} 例（住院 {inpatientCount} · 门诊 {outpatientCount}）, 待办 {tasks.length} 项
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <MiniStat label="负责康复中" value={myCount} />
-          <MiniStat label="AI 方案待确认" value={aiDraftCount} />
+          <MiniStat label="负责康复中" value={totalPatients} />
+          <MiniStat label="待处理总计" value={planPendingCount + assessPendingCount + chatPendingCount} />
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-2 rounded-2xl border bg-card p-3">
-        <QuickAction icon={Sparkles} label="AI 方案" tone="bg-info/15 text-info" onClick={() => onQuick("AI 方案")} />
-        <QuickAction icon={ClipboardCheck} label="康复评估" tone="bg-primary/15 text-primary" onClick={() => onQuick("康复评估")} />
-        <QuickAction icon={FileText} label="院内记录" tone="bg-success/15 text-success" onClick={() => onQuick("院内记录")} />
-        <QuickAction icon={CheckCircle2} label="出院评估" tone="bg-warning/20 text-warning-foreground" onClick={() => onQuick("出院评估")} />
+      {/* 4 个工作台统计入口 */}
+      <div className="grid grid-cols-2 gap-2">
+        <StatEntry
+          icon={Users}
+          label="患者管理"
+          sub={`住院 ${inpatientCount} · 门诊 ${outpatientCount}`}
+          value={totalPatients}
+          tone="bg-info/10 text-info"
+          onClick={onOpenPatients}
+        />
+        <StatEntry
+          icon={HeartPulse}
+          label="康复方案"
+          sub={planPendingCount > 0 ? `${planPendingCount} 份待确认` : "全部已确认"}
+          value={planPendingCount}
+          badge={planPendingCount > 0}
+          tone="bg-primary/10 text-primary"
+          onClick={onOpenPlans}
+        />
+        <StatEntry
+          icon={ClipboardCheck}
+          label="康复评估"
+          sub={assessPendingCount > 0 ? `${assessPendingCount} 项待评估` : "今日已完成"}
+          value={assessPendingCount}
+          badge={assessPendingCount > 0}
+          tone="bg-warning/15 text-warning-foreground"
+          onClick={onOpenRecords}
+        />
+        <StatEntry
+          icon={MessageCircle}
+          label="患者沟通"
+          sub={chatPendingCount > 0 ? `${chatPendingCount} 条未回复` : "无待回复"}
+          value={chatPendingCount}
+          badge={chatPendingCount > 0}
+          tone="bg-success/15 text-success"
+          onClick={onOpenPatients}
+        />
       </div>
 
       <Card title="今日待办" rightLabel={`${tasks.length} 项`}>
@@ -248,6 +313,47 @@ function HomeTab({
         </div>
       </Card>
     </div>
+  );
+}
+
+function StatEntry({
+  icon: Icon,
+  label,
+  sub,
+  value,
+  badge,
+  tone,
+  onClick,
+}: {
+  icon: React.ElementType;
+  label: string;
+  sub: string;
+  value: number;
+  badge?: boolean;
+  tone: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="relative flex items-center gap-2.5 rounded-2xl border bg-card p-3 text-left active:bg-muted/30"
+      style={{ boxShadow: "var(--shadow-card)" }}
+    >
+      <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl", tone)}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1">
+          <span className="text-[12px] font-semibold">{label}</span>
+          {badge && value > 0 && (
+            <span className="rounded-full bg-destructive px-1.5 py-0.5 text-[9px] font-bold text-destructive-foreground">
+              {value}
+            </span>
+          )}
+        </div>
+        <div className="mt-0.5 truncate text-[10px] text-muted-foreground">{sub}</div>
+      </div>
+    </button>
   );
 }
 
@@ -383,49 +489,33 @@ function PlansTab({
 
 function RecordsTab({
   inpatientList,
-  outpatientList,
   onSelect,
   onAssess,
   onAddRecord,
   onDischarge,
 }: {
   inpatientList: Patient[];
-  outpatientList: Patient[];
   onSelect: (p: Patient) => void;
   onAssess: (p: Patient) => void;
   onAddRecord: (p: Patient) => void;
   onDischarge: (p: Patient) => void;
 }) {
-  const [sub, setSub] = useState<"inpatient" | "outpatient">("inpatient");
-  const list = sub === "inpatient" ? inpatientList : outpatientList;
+  const list = inpatientList;
 
   return (
     <div className="space-y-3 p-3">
-      {/* 子分段：住院 / 门诊 */}
-      <div className="grid grid-cols-2 overflow-hidden rounded-full border bg-muted/30 p-0.5 text-[12px]">
-        <button
-          onClick={() => setSub("inpatient")}
-          className={cn(
-            "rounded-full py-1.5 font-medium transition-colors",
-            sub === "inpatient" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
-          )}
-        >
-          住院 · {inpatientList.length}
-        </button>
-        <button
-          onClick={() => setSub("outpatient")}
-          className={cn(
-            "rounded-full py-1.5 font-medium transition-colors",
-            sub === "outpatient" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
-          )}
-        >
-          门诊 · {outpatientList.length}
-        </button>
+      <div className="rounded-2xl border bg-info/5 p-2.5 text-[11px] text-info">
+        <ClipboardCheck className="mr-1 inline h-3 w-3" />
+        院内评估仅记录住院患者；门诊患者的康复记录请在「患者管理 → 患者档案」中查看。
+      </div>
+
+      <div className="flex items-center justify-between px-1">
+        <div className="text-[12px] font-semibold">住院康复 · {list.length} 例</div>
       </div>
 
       {list.length === 0 && (
         <div className="rounded-2xl border bg-card p-6 text-center text-[12px] text-muted-foreground">
-          暂无{sub === "inpatient" ? "住院" : "门诊"}康复患者
+          暂无住院康复患者
         </div>
       )}
 
@@ -669,14 +759,6 @@ function MeTab() {
         </div>
       </ChartCard>
 
-      <Card title="设置">
-        {["AI 康复方案模板", "评估表单管理", "院内治疗记录模板", "关于骨安"].map((s) => (
-          <button key={s} className="flex w-full items-center justify-between border-b px-3 py-3 text-[12px] last:border-b-0 active:bg-muted/30">
-            {s}
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-          </button>
-        ))}
-      </Card>
     </div>
   );
 }

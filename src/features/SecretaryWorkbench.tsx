@@ -36,7 +36,7 @@ type Overlay =
   | { kind: "archive"; patient: Patient }
   | { kind: "vitals"; patient: Patient }
   | { kind: "handover" }
-  | { kind: "education"; candidates: Patient[] }
+  | { kind: "education"; candidates: Patient[]; lockSinglePatient?: boolean }
   | null;
 
 export function SecretaryWorkbench() {
@@ -89,7 +89,7 @@ export function SecretaryWorkbench() {
           onQuick={(key) => {
             if (key === "handover") setOverlay({ kind: "handover" });
             else if (key === "education") setOverlay({ kind: "education", candidates: [...pendingAdmission, ...inpatientPatients] });
-            else if (key === "ocr") showToast("打开 OCR 入院单识别");
+            else if (key === "ocr") showToast("OCR 识别：化验单 / 入院单 / 电子病历");
             else if (key === "vitals") {
               const target = inpatientPatients[0];
               if (target) setOverlay({ kind: "vitals", patient: target });
@@ -103,7 +103,7 @@ export function SecretaryWorkbench() {
           list={pendingAdmission}
           onChat={(p) => setOverlay({ kind: "chat", patient: p })}
           onArchive={(p) => setOverlay({ kind: "archive", patient: p })}
-          onEducation={(p) => setOverlay({ kind: "education", candidates: [p] })}
+          onEducation={(p) => setOverlay({ kind: "education", candidates: [p], lockSinglePatient: true })}
           onBatchEducation={() => setOverlay({ kind: "education", candidates: pendingAdmission })}
         />
       )}
@@ -127,7 +127,12 @@ export function SecretaryWorkbench() {
       )}
       {overlay?.kind === "handover" && <HandoverSheet onClose={() => setOverlay(null)} />}
       {overlay?.kind === "education" && (
-        <EducationPushSheet candidates={overlay.candidates} onClose={() => setOverlay(null)} onPush={showToast} />
+        <EducationPushSheet
+          candidates={overlay.candidates}
+          lockSinglePatient={overlay.lockSinglePatient}
+          onClose={() => setOverlay(null)}
+          onPush={showToast}
+        />
       )}
 
       <ActionSheet
@@ -138,7 +143,7 @@ export function SecretaryWorkbench() {
           { label: "在线沟通（含电话/档案）", tone: "primary", onClick: () => actionPatient && setOverlay({ kind: "chat", patient: actionPatient }) },
           { label: "查看患者档案", onClick: () => actionPatient && setOverlay({ kind: "archive", patient: actionPatient }) },
           { label: "录入住院指标（DVT/生命体征）", onClick: () => actionPatient && setOverlay({ kind: "vitals", patient: actionPatient }) },
-          { label: "推送宣教内容", onClick: () => actionPatient && setOverlay({ kind: "education", candidates: [actionPatient] }) },
+          { label: "推送宣教内容", onClick: () => actionPatient && setOverlay({ kind: "education", candidates: [actionPatient], lockSinglePatient: true }) },
         ]}
       />
       {toast && <ToastBanner text={toast} />}
@@ -176,7 +181,7 @@ function HomeTab({
       </div>
 
       <div className="grid grid-cols-4 gap-2 rounded-2xl border bg-card p-3">
-        <QuickAction icon={Camera} label="OCR 入院单" tone="bg-info/15 text-info" onClick={() => onQuick("ocr")} />
+        <QuickAction icon={Camera} label="OCR 录入" tone="bg-info/15 text-info" onClick={() => onQuick("ocr")} />
         <QuickAction icon={ClipboardList} label="护理交班" tone="bg-primary/15 text-primary" onClick={() => onQuick("handover")} />
         <QuickAction icon={Activity} label="指标录入" tone="bg-warning/20 text-warning-foreground" onClick={() => onQuick("vitals")} />
         <QuickAction icon={BellRing} label="宣教推送" tone="bg-success/15 text-success" onClick={() => onQuick("education")} />
@@ -417,14 +422,6 @@ function MeTab({ name, role }: { name: string; role: string }) {
         </div>
       </ChartCard>
 
-      <Card title="设置">
-        {["消息通知", "护理模板管理", "关于骨安"].map((s) => (
-          <button key={s} className="flex w-full items-center justify-between border-b px-3 py-3 text-[12px] last:border-b-0 active:bg-muted/30">
-            {s}
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-          </button>
-        ))}
-      </Card>
     </div>
   );
 }
