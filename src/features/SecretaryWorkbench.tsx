@@ -17,6 +17,7 @@ import {
   MessageCircle,
   FileSearch,
   Activity,
+  HeartPulse,
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { PatientChatSheet } from "@/components/PatientChatSheet";
@@ -25,18 +26,20 @@ import { ActionSheet, ToastBanner } from "@/components/ActionSheet";
 import { HandoverSheet } from "@/components/HandoverSheet";
 import { VitalsSheet } from "@/components/VitalsSheet";
 import { EducationPushSheet } from "@/components/EducationPushSheet";
+import { FollowUpSheet } from "@/components/FollowUpSheet";
 import { BarChart, ChartCard, HBarRow, StatTile } from "@/components/WorkStats";
 import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type TabKey = "home" | "outpatient" | "inpatient" | "me";
+type TabKey = "home" | "outpatient" | "inpatient" | "followup" | "me";
 type Overlay =
   | { kind: "chat"; patient: Patient }
   | { kind: "archive"; patient: Patient }
   | { kind: "vitals"; patient: Patient }
   | { kind: "handover" }
   | { kind: "education"; candidates: Patient[]; lockSinglePatient?: boolean }
+  | { kind: "followup"; candidates: Patient[] }
   | null;
 
 export function SecretaryWorkbench() {
