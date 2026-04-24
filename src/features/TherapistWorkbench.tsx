@@ -6,6 +6,7 @@ import {
   Home,
   HeartPulse,
   User,
+  Users,
   ChevronRight,
   Sparkles,
   Edit3,
@@ -775,14 +776,6 @@ function MeTab() {
         </div>
       </ChartCard>
 
-      <Card title="设置">
-        {["AI 康复方案模板", "评估表单管理", "院内治疗记录模板", "关于骨安"].map((s) => (
-          <button key={s} className="flex w-full items-center justify-between border-b px-3 py-3 text-[12px] last:border-b-0 active:bg-muted/30">
-            {s}
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-          </button>
-        ))}
-      </Card>
     </div>
   );
 }

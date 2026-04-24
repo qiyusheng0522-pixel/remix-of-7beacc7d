@@ -260,8 +260,8 @@ export const todayTasks: Record<string, TaskItem[]> = {
     { id: "t6", title: "DVT/血栓监测指标录入", patientName: "杨成轩", bedNo: "05", priority: "medium", type: "nursing" },
   ],
   "doctor-on-duty": [
-    { id: "d1", title: "OCR 录入术前康复评估量表", patientName: "刘德海", bedNo: "01", priority: "high", type: "ocr", due: "今日 16:00" },
-    { id: "d2", title: "OCR 录入术前康复评估量表", patientName: "吴翠花", bedNo: "02", priority: "high", type: "ocr", due: "今日 16:00" },
+    { id: "d1", title: "录入术前康复评估量表", patientName: "刘德海", bedNo: "01", priority: "high", type: "ocr", due: "今日 16:00" },
+    { id: "d2", title: "录入术前康复评估量表", patientName: "吴翠花", bedNo: "02", priority: "high", type: "ocr", due: "今日 16:00" },
   ],
   "surgical-team": [
     { id: "s1", title: "明日手术患者确认", patientName: "刘德海", bedNo: "01", priority: "high", type: "decision" },
