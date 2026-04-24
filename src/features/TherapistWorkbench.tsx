@@ -109,9 +109,11 @@ export function TherapistWorkbench() {
           planPendingCount={myPatients.filter((p) => planStatuses[p.id] === "ai-draft").length}
           assessPendingCount={tasks.filter((t) => t.type === "preop-confirm" || t.type === "discharge").length}
           chatPendingCount={3}
+          surgConfirmPending={surgPending}
           onOpenPatients={() => setOverlay({ kind: "patient-list" })}
           onOpenPlans={() => setTab("plans")}
           onOpenRecords={() => setTab("records")}
+          onOpenSurgConfirm={() => setOverlay({ kind: "surg-confirm" })}
           onQuick={(l) => showToast(`已打开 ${l}`)}
         />
       )}
@@ -138,7 +140,7 @@ export function TherapistWorkbench() {
           onSelect={(p) => setActionPatient(p)}
           onAssess={(p) => showToast(`正在为 ${p.name} 进行康复评估...`)}
           onAddRecord={(p) => setRecordFor(p)}
-          onDischarge={(p) => showToast(`已发起康复出院评估：${p.name}`)}
+          onDischarge={(p) => setOverlay({ kind: "discharge", patient: p })}
         />
       )}
       {tab === "me" && <MeTab />}
