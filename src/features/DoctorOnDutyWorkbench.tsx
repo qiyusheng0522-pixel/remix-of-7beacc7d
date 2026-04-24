@@ -16,7 +16,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
-import { Card, MiniStat, QuickAction, SearchBar } from "./SecretaryWorkbench";
+import { Card, MiniStat, SearchBar } from "./SecretaryWorkbench";
 import { BarChart, ChartCard, LineChart, StatTile } from "@/components/WorkStats";
 import { ToastBanner } from "@/components/ActionSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
