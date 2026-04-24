@@ -35,6 +35,8 @@ type Overlay =
   | { kind: "chat"; patient: Patient }
   | { kind: "archive"; patient: Patient }
   | { kind: "patient-list" }
+  | { kind: "surg-confirm" }
+  | { kind: "discharge"; patient: Patient }
   | null;
 
 // AI 生成的康复方案（模拟）
