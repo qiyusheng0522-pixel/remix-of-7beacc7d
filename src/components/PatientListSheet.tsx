@@ -80,7 +80,7 @@ export function PatientListSheet({
         )}
         {list.map((p) => (
           <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
-            <div className="border-b p-3">
+            <button onClick={() => onArchive(p)} className="block w-full border-b p-3 text-left active:bg-muted/30">
               <div className="flex items-center gap-1.5">
                 {p.bedNo ? (
                   <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
@@ -91,6 +91,7 @@ export function PatientListSheet({
                 )}
                 <span className="text-sm font-bold">{p.name}</span>
                 <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
+                <ChevronRight className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
               </div>
               <div className="mt-1 text-[10px] text-muted-foreground">
                 {p.diagnosis} · {p.surgeryName ?? "保守治疗"}
@@ -102,7 +103,7 @@ export function PatientListSheet({
                   {notes[p.id]}
                 </div>
               )}
-            </div>
+            </button>
             <div className="grid grid-cols-3 gap-0 border-t">
               <button
                 onClick={() => onArchive(p)}
