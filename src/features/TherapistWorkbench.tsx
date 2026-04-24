@@ -842,3 +842,130 @@ function PlanStatusBadge({ status }: { status: PlanStatus }) {
   );
 }
 
+/* ---------- 手术确认（治疗师同步） ---------- */
+function SurgConfirmSheet({
+  list,
+  confirms,
+  onClose,
+  onAck,
+}: {
+  list: Patient[];
+  confirms: Record<string, "ack" | undefined>;
+  onClose: () => void;
+  onAck: (p: Patient) => void;
+}) {
+  return (
+    <div className="absolute inset-0 z-50 flex flex-col bg-background">
+      <div className="flex items-center justify-between border-b bg-card px-3 py-2.5">
+        <button onClick={onClose}>
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="text-[13px] font-semibold">手术确认 · 治疗师同步</div>
+        <div className="w-4" />
+      </div>
+      <div className="flex-1 space-y-2 overflow-y-auto p-3">
+        <div className="rounded-2xl border bg-info/5 p-2.5 text-[11px] text-info">
+          <Sparkles className="mr-1 inline h-3 w-3" />
+          手术团队已确认明日手术，治疗师需同步确认收到术前康复方案。
+        </div>
+        {list.length === 0 && (
+          <div className="rounded-2xl border bg-card p-6 text-center text-[12px] text-muted-foreground">
+            暂无待确认手术
+          </div>
+        )}
+        {list.map((p) => {
+          const acked = confirms[p.id] === "ack";
+          return (
+            <div key={p.id} className="overflow-hidden rounded-2xl border bg-card">
+              <div className="border-b p-3">
+                <div className="flex items-center gap-1.5">
+                  {p.bedNo && (
+                    <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
+                      {p.bedNo}床
+                    </span>
+                  )}
+                  <span className="text-sm font-bold">{p.name}</span>
+                  <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
+                  {p.side && (
+                    <span className="rounded bg-warning/20 px-1 py-0.5 text-[9px] font-bold text-warning-foreground">
+                      患侧 {p.side}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-1 text-[10px] text-muted-foreground">
+                  {p.surgeryName} · 主刀 {p.director} · 术日 {p.surgeryDate}
+                </div>
+              </div>
+              <button
+                disabled={acked}
+                onClick={() => onAck(p)}
+                className={cn(
+                  "flex w-full items-center justify-center gap-1 py-2.5 text-[12px] font-medium",
+                  acked ? "bg-muted text-muted-foreground" : "text-primary-foreground",
+                )}
+                style={!acked ? { background: "var(--gradient-primary)" } : undefined}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {acked ? "已确认收到" : "确认收到术前方案"}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- 出院备注 ---------- */
+function DischargeSheet({
+  patient,
+  onClose,
+  onConfirm,
+}: {
+  patient: Patient;
+  onClose: () => void;
+  onConfirm: (note: string) => void;
+}) {
+  const [note, setNote] = useState("");
+  return (
+    <div className="absolute inset-0 z-[60] flex flex-col bg-background">
+      <div className="flex items-center justify-between border-b bg-card px-3 py-2.5">
+        <button onClick={onClose} className="text-[12px] text-muted-foreground">取消</button>
+        <div className="text-[13px] font-semibold">康复出院确认 · {patient.name}</div>
+        <button
+          disabled={!note.trim()}
+          onClick={() => onConfirm(note.trim())}
+          className="flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-[11px] font-medium text-primary-foreground disabled:opacity-40"
+        >
+          <Save className="h-3 w-3" />确认出院
+        </button>
+      </div>
+      <div className="flex-1 space-y-3 overflow-y-auto bg-muted/20 p-3">
+        <div className="rounded-2xl border bg-warning/5 p-2.5 text-[11px] text-warning-foreground">
+          <AlertTriangle className="mr-1 inline h-3 w-3" />
+          确认出院前必须填写出院备注，所有角色（医生 / 护士 / 治疗师）均可查看。
+        </div>
+        <div className="rounded-2xl border bg-card p-3 text-[11px]">
+          <div className="font-semibold">
+            {patient.bedNo && `${patient.bedNo}床 · `}{patient.name} · {patient.surgeryName ?? patient.diagnosis}
+          </div>
+          <div className="mt-1 text-[10px] text-muted-foreground">
+            术日 {patient.surgeryDate ?? "—"} · 患侧 {patient.side ?? "—"}
+          </div>
+        </div>
+        <div>
+          <div className="mb-1 text-[11px] font-semibold">出院备注说明 *</div>
+          <textarea
+            rows={6}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="请填写康复达标情况、居家训练计划、复诊安排、注意事项..."
+            className="w-full rounded-xl border bg-card p-3 text-[12px] outline-none focus:border-primary"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
