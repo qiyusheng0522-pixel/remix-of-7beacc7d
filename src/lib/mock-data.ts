@@ -163,6 +163,7 @@ export const patients: Patient[] = [
       strength: "股四头肌 4+ 级",
       dailyFunction: "可缓慢平地行走，蹲起受限",
     },
+  },
   // 今日手术
   {
     id: "p7",
