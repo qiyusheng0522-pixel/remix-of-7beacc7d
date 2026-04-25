@@ -156,7 +156,13 @@ export const patients: Patient[] = [
       { label: "MRI", value: "外侧半月板桶柄撕裂", abnormal: true },
       { label: "屈膝交锁", value: "无", abnormal: false },
     ],
-  },
+    preOpSymptoms: {
+      painVAS: 4,
+      swelling: "轻",
+      rom: "0-110°",
+      strength: "股四头肌 4+ 级",
+      dailyFunction: "可缓慢平地行走，蹲起受限",
+    },
   // 今日手术
   {
     id: "p7",
