@@ -226,28 +226,21 @@ function HomeTab({
   inpatientCount,
   outpatientCount,
   planPendingCount,
-  assessPendingCount,
   chatPendingCount,
-  surgConfirmPending,
   onOpenPatients,
   onOpenPlans,
   onOpenRecords,
-  onOpenSurgConfirm,
-  onQuick,
 }: {
   tasks: typeof todayTasks.therapist;
   inpatientCount: number;
   outpatientCount: number;
   planPendingCount: number;
-  assessPendingCount: number;
   chatPendingCount: number;
-  surgConfirmPending: number;
   onOpenPatients: () => void;
   onOpenPlans: () => void;
   onOpenRecords: () => void;
-  onOpenSurgConfirm: () => void;
-  onQuick: (l: string) => void;
 }) {
+  const assessPendingCount = tasks.filter((t) => t.type === "discharge").length;
   return (
     <div className="space-y-3 p-3">
       <div className="rounded-2xl p-4 text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
@@ -296,15 +289,6 @@ function HomeTab({
           onClick={onOpenPatients}
         />
         <StatEntry
-          icon={Calendar}
-          label="手术确认"
-          sub={surgConfirmPending > 0 ? `${surgConfirmPending} 例待治疗师确认` : "全部已确认"}
-          value={surgConfirmPending}
-          badge={surgConfirmPending > 0}
-          tone="bg-warning/15 text-warning-foreground"
-          onClick={onOpenSurgConfirm}
-        />
-        <StatEntry
           icon={Sparkles}
           label="今日待办"
           sub={`${tasks.length} 项任务`}
@@ -327,7 +311,6 @@ function HomeTab({
                 />
                 <div className="text-[12px] font-medium">{t.title}</div>
                 {t.type === "plan" && <Sparkles className="h-3 w-3 text-info" />}
-                {t.type === "preop-confirm" && <ClipboardCheck className="h-3 w-3 text-warning-foreground" />}
                 {t.type === "discharge" && <CheckCircle2 className="h-3 w-3 text-success" />}
               </div>
               <div className="ml-3.5 mt-0.5 text-[10px] text-muted-foreground">
