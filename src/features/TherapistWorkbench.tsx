@@ -17,7 +17,7 @@ import {
   PlusCircle,
   Mic,
   Save,
-  Sparkles as SparklesIcon2,
+  Activity,
   ArrowLeft,
   AlertTriangle,
 } from "lucide-react";
