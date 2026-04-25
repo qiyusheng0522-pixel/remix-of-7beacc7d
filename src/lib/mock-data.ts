@@ -286,8 +286,6 @@ export const todayTasks: Record<string, TaskItem[]> = {
   ],
   therapist: [
     { id: "th1", title: "AI 康复方案确认", patientName: "孙顺英", bedNo: "03", priority: "high", type: "plan" },
-    { id: "th2", title: "术前康复评估确认（是否如期手术）", patientName: "刘德海", bedNo: "01", priority: "high", type: "preop-confirm" },
-    { id: "th3", title: "术前康复评估确认（是否如期手术）", patientName: "吴翠花", bedNo: "02", priority: "high", type: "preop-confirm" },
     { id: "th4", title: "康复出院评估咨询", patientName: "胡国玉", bedNo: "08", priority: "medium", type: "discharge" },
   ],
 };
