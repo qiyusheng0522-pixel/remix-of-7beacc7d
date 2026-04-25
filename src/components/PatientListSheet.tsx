@@ -79,6 +79,30 @@ export function PatientListSheet({
             门诊 · {outpatientList.length}
           </button>
         </div>
+        {sub === "outpatient" && (
+          <div className="mt-2 flex gap-1.5">
+            {(
+              [
+                { k: "all", label: `全部 ${outpatientList.length}` },
+                { k: "first", label: `首诊 ${firstCount}` },
+                { k: "revisit", label: `复诊 ${revisitCount}` },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.k}
+                onClick={() => setOutpatientSub(opt.k)}
+                className={cn(
+                  "rounded-full px-2.5 py-0.5 text-[11px]",
+                  outpatientSub === opt.k
+                    ? "bg-primary text-primary-foreground"
+                    : "border bg-card text-muted-foreground active:bg-muted/40",
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 space-y-2 overflow-y-auto p-3">
