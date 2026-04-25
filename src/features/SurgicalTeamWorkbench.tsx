@@ -171,41 +171,24 @@ function HomeTab({
         <div className="mt-0.5 text-[11px] opacity-90">今日工作台 · 点击数字可跳转对应清单</div>
       </div>
 
-      {/* 今日工作台统计 - 全部可点击跳转 */}
+      {/* 今日工作台统计 - 全部可点击跳转（合并卡片） */}
       <div className="grid grid-cols-2 gap-2">
         <WorkStatCard
           icon={CalendarDays}
-          label="明日手术"
+          label="明日手术确认"
           value={tomorrow}
-          sub={preopPending > 0 ? `${preopPending} 例待确认` : "全部已确认"}
+          sub={preopPending > 0 ? `${preopPending} 例待 AI 结论审核` : "全部已确认"}
           badge={preopPending}
           tone="bg-primary/10 text-primary"
           onClick={() => onJump("preop")}
         />
         <WorkStatCard
-          icon={Calendar}
-          label="手术确认"
-          value={preopPending}
-          sub={preopPending > 0 ? "请尽快审核 AI 结论" : "今日无待确认"}
-          badge={preopPending}
-          tone="bg-warning/15 text-warning-foreground"
-          onClick={() => onJump("preop")}
-        />
-        <WorkStatCard
-          icon={Activity}
-          label="今日手术"
-          value={today}
-          sub={today > 0 ? `${today} 例进行中` : "今日无手术"}
-          tone="bg-info/10 text-info"
-          onClick={() => onJump("intraop")}
-        />
-        <WorkStatCard
           icon={FileSignature}
-          label="术中量表"
-          value={intraopPending}
-          sub={intraopPending > 0 ? `${intraopPending} 份待填写` : "全部已完成"}
+          label="今日术中量表"
+          value={today}
+          sub={today > 0 ? `${today} 例进行中 · ${intraopPending} 份待填写` : "今日无手术"}
           badge={intraopPending}
-          tone="bg-success/15 text-success"
+          tone="bg-warning/15 text-warning-foreground"
           onClick={() => onJump("intraop")}
         />
         <WorkStatCard
