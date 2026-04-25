@@ -119,6 +119,52 @@ export function PatientArchiveSheet({
           ))}
         </div>
 
+        {/* 术前检查项数据结果（门诊待入院 / 术前阶段） */}
+        {(patient.preOpFindings || patient.preOpSymptoms) && (
+          <>
+            <SectionTitle icon={Activity} text="术前检查项数据" tone="text-primary" />
+            <div className="rounded-xl border bg-primary/5 p-3 text-[11px]">
+              {patient.preOpFindings && patient.preOpFindings.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {patient.preOpFindings.map((f) => (
+                    <span
+                      key={f.label}
+                      className={`rounded-md px-1.5 py-0.5 text-[10px] ${
+                        f.abnormal
+                          ? "bg-destructive/10 font-bold text-destructive"
+                          : "bg-card text-muted-foreground"
+                      }`}
+                    >
+                      {f.label} {f.value}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {patient.preOpSymptoms && (
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                  {patient.preOpSymptoms.painVAS !== undefined && (
+                    <Field label="疼痛 VAS" value={`${patient.preOpSymptoms.painVAS}/10`} />
+                  )}
+                  {patient.preOpSymptoms.swelling && (
+                    <Field label="肿胀" value={patient.preOpSymptoms.swelling} />
+                  )}
+                  {patient.preOpSymptoms.rom && (
+                    <Field label="关节活动度" value={patient.preOpSymptoms.rom} />
+                  )}
+                  {patient.preOpSymptoms.strength && (
+                    <Field label="肌力" value={patient.preOpSymptoms.strength} />
+                  )}
+                  {patient.preOpSymptoms.dailyFunction && (
+                    <div className="col-span-2">
+                      <Field label="日常功能" value={patient.preOpSymptoms.dailyFunction} />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
         {/* 术前康复评估 */}
         <SectionTitle icon={Activity} text="术前康复评估" tone="text-info" />
         <div className="rounded-xl border bg-info/5 p-3 text-[11px]">
