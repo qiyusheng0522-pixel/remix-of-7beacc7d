@@ -171,41 +171,24 @@ function HomeTab({
         <div className="mt-0.5 text-[11px] opacity-90">今日工作台 · 点击数字可跳转对应清单</div>
       </div>
 
-      {/* 今日工作台统计 - 全部可点击跳转 */}
+      {/* 今日工作台统计 - 全部可点击跳转（合并卡片） */}
       <div className="grid grid-cols-2 gap-2">
         <WorkStatCard
           icon={CalendarDays}
-          label="明日手术"
+          label="明日手术确认"
           value={tomorrow}
-          sub={preopPending > 0 ? `${preopPending} 例待确认` : "全部已确认"}
+          sub={preopPending > 0 ? `${preopPending} 例待 AI 结论审核` : "全部已确认"}
           badge={preopPending}
           tone="bg-primary/10 text-primary"
           onClick={() => onJump("preop")}
         />
         <WorkStatCard
-          icon={Calendar}
-          label="手术确认"
-          value={preopPending}
-          sub={preopPending > 0 ? "请尽快审核 AI 结论" : "今日无待确认"}
-          badge={preopPending}
-          tone="bg-warning/15 text-warning-foreground"
-          onClick={() => onJump("preop")}
-        />
-        <WorkStatCard
-          icon={Activity}
-          label="今日手术"
-          value={today}
-          sub={today > 0 ? `${today} 例进行中` : "今日无手术"}
-          tone="bg-info/10 text-info"
-          onClick={() => onJump("intraop")}
-        />
-        <WorkStatCard
           icon={FileSignature}
-          label="术中量表"
-          value={intraopPending}
-          sub={intraopPending > 0 ? `${intraopPending} 份待填写` : "全部已完成"}
+          label="今日术中量表"
+          value={today}
+          sub={today > 0 ? `${today} 例进行中 · ${intraopPending} 份待填写` : "今日无手术"}
           badge={intraopPending}
-          tone="bg-success/15 text-success"
+          tone="bg-warning/15 text-warning-foreground"
           onClick={() => onJump("intraop")}
         />
         <WorkStatCard
@@ -597,23 +580,37 @@ function FormField({ label, value }: { label: string; value: string }) {
 }
 
 function MeTab() {
+  const [showDetails, setShowDetails] = useState(false);
   const monthlySurgery = [
     { label: "1月", value: 22 },
     { label: "2月", value: 28 },
     { label: "3月", value: 31 },
     { label: "4月", value: 26 },
   ];
+  const team = [
+    { n: "王主任", r: "主刀医师", role: "组长", count: 26 },
+    { n: "李医生", r: "一助", role: "成员", count: 21 },
+    { n: "陈医生", r: "二助", role: "成员", count: 18 },
+    { n: "朱年鑫", r: "治疗师", role: "成员", count: 0 },
+  ];
+  const teamSurgeryTotal = team.reduce((s, m) => s + m.count, 0);
+
   return (
     <div className="space-y-3 p-3">
       <div className="rounded-2xl border bg-card p-4 text-center">
-        <div
-          className="mx-auto flex h-16 w-16 items-center justify-center rounded-full text-xl font-bold text-primary-foreground"
-          style={{ background: "var(--gradient-primary)" }}
-        >
-          王
+        <div className="relative mx-auto h-16 w-16">
+          <div
+            className="flex h-16 w-16 items-center justify-center rounded-full text-xl font-bold text-primary-foreground"
+            style={{ background: "var(--gradient-primary)" }}
+          >
+            王
+          </div>
+          <span className="absolute -right-1 -top-1 rounded-full bg-warning px-1.5 py-0.5 text-[9px] font-bold text-warning-foreground shadow">
+            组长
+          </span>
         </div>
-        <div className="mt-2 text-base font-bold">王主任</div>
-        <div className="text-[11px] text-muted-foreground">骨科主任医师 · 主刀</div>
+        <div className="mt-2 text-base font-bold">王主任 · 组长</div>
+        <div className="text-[11px] text-muted-foreground">骨科主任医师 · 主刀 · 王主任手术团队</div>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -635,25 +632,142 @@ function MeTab() {
         </div>
       </ChartCard>
 
-      <Card title="我的团队">
-        {[
-          { n: "王主任", r: "主刀医师" },
-          { n: "李医生", r: "一助" },
-          { n: "陈医生", r: "二助" },
-          { n: "朱年鑫", r: "治疗师" },
-        ].map((x) => (
+      {/* 团队手术统计 - 组长视角 */}
+      <Card title="我的团队 · 手术统计" rightLabel={`本月共 ${teamSurgeryTotal} 例`}>
+        <button
+          onClick={() => setShowDetails(true)}
+          className="flex w-full items-center justify-between border-b bg-info/5 px-3 py-2 text-[11px] text-info active:bg-info/10"
+        >
+          <span className="flex items-center gap-1">
+            <FileSignature className="h-3 w-3" />
+            查看团队手术明细（自定义筛选）
+          </span>
+          <ChevronRight className="h-3 w-3" />
+        </button>
+        {team.map((x) => (
           <div key={x.n} className="flex items-center gap-2 border-b px-3 py-2.5 last:border-b-0">
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary">
               {x.n.slice(0, 1)}
             </div>
             <div className="flex-1">
-              <div className="text-[12px] font-medium">{x.n}</div>
+              <div className="flex items-center gap-1.5 text-[12px] font-medium">
+                {x.n}
+                {x.role === "组长" && (
+                  <span className="rounded bg-warning/20 px-1 py-0.5 text-[9px] font-bold text-warning-foreground">
+                    组长
+                  </span>
+                )}
+              </div>
               <div className="text-[10px] text-muted-foreground">{x.r}</div>
             </div>
-            <Stethoscope className="h-3.5 w-3.5 text-muted-foreground" />
+            <div className="text-right">
+              <div className="text-[13px] font-bold text-primary">{x.count}</div>
+              <div className="text-[9px] text-muted-foreground">本月手术</div>
+            </div>
           </div>
         ))}
       </Card>
+
+      {showDetails && <TeamSurgeryDetailsSheet onClose={() => setShowDetails(false)} />}
+    </div>
+  );
+}
+
+/* ---------- 团队手术明细（支持自定义筛选） ---------- */
+function TeamSurgeryDetailsSheet({ onClose }: { onClose: () => void }) {
+  const [member, setMember] = useState<string>("全部");
+  const [period, setPeriod] = useState<"本周" | "本月" | "近3月">("本月");
+  const [type, setType] = useState<string>("全部");
+
+  const allRecords = [
+    { date: "2024-04-22", patient: "孙顺英", surgeon: "王主任", type: "肩关节镜", duration: "92 min" },
+    { date: "2024-04-21", patient: "范芳进", surgeon: "李医生", type: "髌骨修补", duration: "65 min" },
+    { date: "2024-04-19", patient: "杨成轩", surgeon: "王主任", type: "跟腱缝合", duration: "70 min" },
+    { date: "2024-04-17", patient: "何宗兰", surgeon: "陈医生", type: "肩袖修补", duration: "85 min" },
+    { date: "2024-04-15", patient: "胡国玉", surgeon: "王主任", type: "PCL 重建", duration: "110 min" },
+    { date: "2024-04-12", patient: "赵晓敏", surgeon: "李医生", type: "ACL 重建", duration: "120 min" },
+    { date: "2024-04-08", patient: "周晨光", surgeon: "陈医生", type: "半月板缝合", duration: "55 min" },
+  ];
+  const surgeons = ["全部", "王主任", "李医生", "陈医生"];
+  const types = ["全部", "ACL 重建", "PCL 重建", "肩关节镜", "肩袖修补", "髌骨修补", "跟腱缝合", "半月板缝合"];
+  const filtered = allRecords.filter(
+    (r) => (member === "全部" || r.surgeon === member) && (type === "全部" || r.type === type),
+  );
+
+  return (
+    <div className="absolute inset-0 z-[60] flex flex-col bg-background">
+      <div className="flex items-center justify-between border-b bg-card px-3 py-2.5">
+        <button onClick={onClose}>
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="text-[13px] font-semibold">团队手术明细</div>
+        <div className="w-4" />
+      </div>
+
+      {/* 筛选条件 */}
+      <div className="space-y-2 border-b bg-card p-3">
+        <FilterRow label="成员" options={surgeons} value={member} onChange={setMember} />
+        <FilterRow label="时间" options={["本周", "本月", "近3月"]} value={period} onChange={(v) => setPeriod(v as never)} />
+        <FilterRow label="术式" options={types} value={type} onChange={setType} />
+      </div>
+
+      <div className="flex-1 space-y-2 overflow-y-auto p-3">
+        <div className="flex items-center justify-between px-1 text-[11px]">
+          <span className="text-muted-foreground">共 {filtered.length} 例</span>
+          <span className="text-info">支持点击查看详情</span>
+        </div>
+        {filtered.map((r, i) => (
+          <button
+            key={i}
+            className="flex w-full items-center justify-between rounded-2xl border bg-card p-3 text-left active:bg-muted/30"
+          >
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[12px] font-bold">{r.patient}</span>
+                <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[9px] text-primary">{r.type}</span>
+              </div>
+              <div className="mt-0.5 text-[10px] text-muted-foreground">
+                {r.date} · 主刀 {r.surgeon} · {r.duration}
+              </div>
+            </div>
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FilterRow({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: string[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-8 shrink-0 text-[10px] text-muted-foreground">{label}</span>
+      <div className="flex flex-wrap gap-1">
+        {options.map((o) => (
+          <button
+            key={o}
+            onClick={() => onChange(o)}
+            className={cn(
+              "rounded-full px-2 py-0.5 text-[10px]",
+              value === o
+                ? "bg-primary text-primary-foreground"
+                : "border bg-card text-muted-foreground active:bg-muted/40",
+            )}
+          >
+            {o}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

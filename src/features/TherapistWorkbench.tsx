@@ -17,7 +17,7 @@ import {
   PlusCircle,
   Mic,
   Save,
-  Calendar,
+  Activity,
   ArrowLeft,
   AlertTriangle,
 } from "lucide-react";
@@ -33,14 +33,13 @@ import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type TabKey = "home" | "surg-confirm" | "plans" | "records" | "me";
+type TabKey = "home" | "plans" | "records" | "me";
 type Overlay =
   | { kind: "chat"; patient: Patient }
   | { kind: "archive"; patient: Patient }
   | { kind: "patient-list" }
   | { kind: "discharge"; patient: Patient }
   | null;
-type SurgDecision = "go" | "hold" | "return";
 
 // AI 生成的康复方案（模拟）
 const aiRehabPlan = (patient: Patient) => ({
@@ -77,10 +76,8 @@ export function TherapistWorkbench() {
   const outpatientList = patients.filter((p) => p.department === "outpatient" && p.status === "rehab");
   const myPatients = [...inpatientList, ...outpatientList];
   const tasks = todayTasks.therapist;
-  // 明日手术待治疗师确认（与手术团队同步）
+  // 明日手术（提供给治疗师作为术前康复参考，但治疗师不再做手术决策）
   const tomorrowSurgery = patients.filter((p) => p.status === "admitted" && p.preOpFindings);
-  const [surgConfirms, setSurgConfirms] = useState<Record<string, SurgDecision | undefined>>({});
-  const surgPending = tomorrowSurgery.filter((p) => !surgConfirms[p.id]).length;
 
   const showToast = (t: string) => {
     setToast(t);
@@ -97,7 +94,6 @@ export function TherapistWorkbench() {
           onChange={(k) => setTab(k as TabKey)}
           items={[
             { key: "home", label: "首页", icon: Home, badge: tasks.length },
-            { key: "surg-confirm", label: "手术确认", icon: Calendar, badge: surgPending },
             { key: "plans", label: "康复方案", icon: HeartPulse, badge: myPatients.filter((p) => planStatuses[p.id] === "ai-draft").length },
             { key: "records", label: "院内评估", icon: FileText, badge: inpatientList.length },
             { key: "me", label: "我的", icon: User },
@@ -111,32 +107,10 @@ export function TherapistWorkbench() {
           inpatientCount={inpatientList.length}
           outpatientCount={outpatientList.length}
           planPendingCount={myPatients.filter((p) => planStatuses[p.id] === "ai-draft").length}
-          assessPendingCount={tasks.filter((t) => t.type === "preop-confirm" || t.type === "discharge").length}
           chatPendingCount={3}
-          surgConfirmPending={surgPending}
           onOpenPatients={() => setOverlay({ kind: "patient-list" })}
           onOpenPlans={() => setTab("plans")}
           onOpenRecords={() => setTab("records")}
-          onOpenSurgConfirm={() => setTab("surg-confirm")}
-          onQuick={(l) => showToast(`已打开 ${l}`)}
-        />
-      )}
-      {tab === "surg-confirm" && (
-        <SurgConfirmTab
-          list={tomorrowSurgery}
-          decisions={surgConfirms}
-          onGo={(p) => {
-            setSurgConfirms((s) => ({ ...s, [p.id]: "go" }));
-            showToast(`已确认如期康复介入：${p.name}`);
-          }}
-          onHold={(p) => {
-            setSurgConfirms((s) => ({ ...s, [p.id]: "hold" }));
-            showToast(`已暂缓 ${p.name}，已通知主刀医生`);
-          }}
-          onReturn={(p) => {
-            setSurgConfirms((s) => ({ ...s, [p.id]: "return" }));
-            showToast(`已退回 ${p.name}，待重新评估`);
-          }}
         />
       )}
       {tab === "plans" && (
@@ -159,10 +133,11 @@ export function TherapistWorkbench() {
       {tab === "records" && (
         <RecordsTab
           inpatientList={inpatientList}
+          tomorrowSurgery={tomorrowSurgery}
           onSelect={(p) => setActionPatient(p)}
-          onAssess={(p) => showToast(`正在为 ${p.name} 进行康复评估...`)}
           onAddRecord={(p) => setRecordFor(p)}
           onDischarge={(p) => setOverlay({ kind: "discharge", patient: p })}
+          onArchive={(p) => setOverlay({ kind: "archive", patient: p })}
         />
       )}
       {tab === "me" && <MeTab />}
@@ -252,28 +227,21 @@ function HomeTab({
   inpatientCount,
   outpatientCount,
   planPendingCount,
-  assessPendingCount,
   chatPendingCount,
-  surgConfirmPending,
   onOpenPatients,
   onOpenPlans,
   onOpenRecords,
-  onOpenSurgConfirm,
-  onQuick,
 }: {
   tasks: typeof todayTasks.therapist;
   inpatientCount: number;
   outpatientCount: number;
   planPendingCount: number;
-  assessPendingCount: number;
   chatPendingCount: number;
-  surgConfirmPending: number;
   onOpenPatients: () => void;
   onOpenPlans: () => void;
   onOpenRecords: () => void;
-  onOpenSurgConfirm: () => void;
-  onQuick: (l: string) => void;
 }) {
+  const assessPendingCount = tasks.filter((t) => t.type === "discharge").length;
   return (
     <div className="space-y-3 p-3">
       <div className="rounded-2xl p-4 text-primary-foreground" style={{ background: "var(--gradient-primary)" }}>
@@ -322,15 +290,6 @@ function HomeTab({
           onClick={onOpenPatients}
         />
         <StatEntry
-          icon={Calendar}
-          label="手术确认"
-          sub={surgConfirmPending > 0 ? `${surgConfirmPending} 例待治疗师确认` : "全部已确认"}
-          value={surgConfirmPending}
-          badge={surgConfirmPending > 0}
-          tone="bg-warning/15 text-warning-foreground"
-          onClick={onOpenSurgConfirm}
-        />
-        <StatEntry
           icon={Sparkles}
           label="今日待办"
           sub={`${tasks.length} 项任务`}
@@ -353,7 +312,6 @@ function HomeTab({
                 />
                 <div className="text-[12px] font-medium">{t.title}</div>
                 {t.type === "plan" && <Sparkles className="h-3 w-3 text-info" />}
-                {t.type === "preop-confirm" && <ClipboardCheck className="h-3 w-3 text-warning-foreground" />}
                 {t.type === "discharge" && <CheckCircle2 className="h-3 w-3 text-success" />}
               </div>
               <div className="ml-3.5 mt-0.5 text-[10px] text-muted-foreground">
@@ -541,93 +499,200 @@ function PlansTab({
 
 function RecordsTab({
   inpatientList,
+  tomorrowSurgery,
   onSelect,
-  onAssess,
   onAddRecord,
   onDischarge,
+  onArchive,
 }: {
   inpatientList: Patient[];
+  tomorrowSurgery: Patient[];
   onSelect: (p: Patient) => void;
-  onAssess: (p: Patient) => void;
   onAddRecord: (p: Patient) => void;
   onDischarge: (p: Patient) => void;
+  onArchive: (p: Patient) => void;
 }) {
-  const list = inpatientList;
+  const [sub, setSub] = useState<"tomorrow" | "postop">("postop");
+  // 术后康复 = 已手术 / 术后观察 / 康复中
+  const postOpList = inpatientList;
+  const visible = sub === "tomorrow" ? tomorrowSurgery : postOpList;
 
   return (
     <div className="space-y-3 p-3">
       <div className="rounded-2xl border bg-info/5 p-2.5 text-[11px] text-info">
         <ClipboardCheck className="mr-1 inline h-3 w-3" />
-        院内评估仅记录住院患者；门诊患者的康复记录请在「患者管理 → 患者档案」中查看。
+        住院康复分为「明日手术」（术前 AI 评估）与「术后康复」（每日评估）。
       </div>
 
-      <div className="flex items-center justify-between px-1">
-        <div className="text-[12px] font-semibold">住院康复 · {list.length} 例</div>
+      <div className="grid grid-cols-2 overflow-hidden rounded-full border bg-muted/30 p-0.5 text-[12px]">
+        <button
+          onClick={() => setSub("tomorrow")}
+          className={cn(
+            "rounded-full py-1.5 font-medium transition-colors",
+            sub === "tomorrow" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
+          )}
+        >
+          明日手术 · {tomorrowSurgery.length}
+        </button>
+        <button
+          onClick={() => setSub("postop")}
+          className={cn(
+            "rounded-full py-1.5 font-medium transition-colors",
+            sub === "postop" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
+          )}
+        >
+          术后康复 · {postOpList.length}
+        </button>
       </div>
 
-      {list.length === 0 && (
+      {visible.length === 0 && (
         <div className="rounded-2xl border bg-card p-6 text-center text-[12px] text-muted-foreground">
-          暂无住院康复患者
+          {sub === "tomorrow" ? "暂无明日手术患者" : "暂无术后康复患者"}
         </div>
       )}
 
-      {list.map((p) => (
-        <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
-          <button onClick={() => onSelect(p)} className="block w-full border-b p-3 text-left">
-            <div className="flex items-center gap-1.5">
-              {p.bedNo ? (
-                <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
-                  {p.bedNo}床
-                </span>
-              ) : (
-                <span className="rounded-md bg-info/10 px-1.5 py-0.5 text-[10px] font-bold text-info">门诊</span>
+      {/* 明日手术：展示患者基本信息 + AI 术前康复评估 */}
+      {sub === "tomorrow" &&
+        visible.map((p) => {
+          const ai = aiPreOpRehabAssessment(p);
+          const s = p.preOpSymptoms;
+          return (
+            <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
+              <button onClick={() => onArchive(p)} className="block w-full border-b p-3 text-left active:bg-muted/30">
+                <div className="flex items-center gap-1.5">
+                  <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
+                    {p.bedNo}床
+                  </span>
+                  <span className="text-sm font-bold">{p.name}</span>
+                  <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
+                  {p.side && (
+                    <span className="rounded bg-warning/20 px-1 py-0.5 text-[9px] font-bold text-warning-foreground">
+                      患侧 {p.side}
+                    </span>
+                  )}
+                  <span className="ml-auto rounded bg-info/15 px-1.5 py-0.5 text-[9px] font-bold text-info">
+                    明日手术
+                  </span>
+                </div>
+                <div className="mt-1 text-[10px] text-muted-foreground">
+                  {p.surgeryName} · 术日 {p.surgeryDate} · 主刀 {p.director}
+                </div>
+              </button>
+
+              {/* 术前症状指标 */}
+              {s && (
+                <div className="grid grid-cols-3 gap-2 border-b p-3">
+                  <Metric label="疼痛 VAS" value={`${s.painVAS ?? "—"}/10`} trend={(s.painVAS ?? 0) >= 5 ? "down" : "up"} />
+                  <Metric label="肿胀" value={s.swelling ?? "—"} trend={s.swelling === "中" || s.swelling === "重" ? "down" : "up"} />
+                  <Metric label="ROM" value={s.rom ?? "—"} trend="up" />
+                  {s.strength && <Metric label="肌力" value={s.strength} trend="up" />}
+                  {s.dailyFunction && (
+                    <div className="col-span-3 rounded-lg border bg-muted/20 p-2 text-[10px] text-muted-foreground">
+                      <span className="font-medium text-foreground">日常功能：</span>
+                      {s.dailyFunction}
+                    </div>
+                  )}
+                </div>
               )}
-              <span className="text-sm font-bold">{p.name}</span>
-              <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
-              {p.status === "rehab" && p.department === "inpatient" && <Pill cls="bg-success/15 text-success">康复达标</Pill>}
-              {p.status === "post-op" && <Pill cls="bg-info/15 text-info">术后第 3 日</Pill>}
-              {p.status === "in-surgery" && <Pill cls="bg-warning/20 text-warning-foreground">今日术后</Pill>}
-              {p.status === "rehab" && p.department === "outpatient" && <Pill cls="bg-info/15 text-info">门诊康复</Pill>}
-            </div>
-            <div className="mt-1 text-[10px] text-muted-foreground">
-              {p.surgeryName ?? p.diagnosis}
-              {p.surgeryDate && ` · 术日 ${p.surgeryDate}`}
-            </div>
-          </button>
 
-          <div className="grid grid-cols-2 gap-2 p-3">
-            <Metric label="疼痛 VAS" value="3/10" trend="down" />
-            <Metric label="屈膝角度" value="85°" trend="up" />
-            <Metric label="SLR" value="可独立" trend="up" />
-            <Metric label="是否下地" value={p.status === "in-surgery" ? "未" : "已下地"} trend="up" />
-          </div>
+              {/* AI 术前评估结论 */}
+              <div className={cn(
+                "border-b p-3",
+                ai.level === "良好" ? "bg-success/5" : ai.level === "尚可" ? "bg-warning/5" : "bg-destructive/5",
+              )}>
+                <div className={cn("flex items-center gap-1 text-[11px] font-bold", ai.tone)}>
+                  <Sparkles className="h-3 w-3" />
+                  {ai.summary}
+                </div>
+                <ul className="mt-1 space-y-0.5 pl-3 text-[10px] text-muted-foreground">
+                  {ai.reasons.map((r, i) => (
+                    <li key={i} className="list-disc">{r}</li>
+                  ))}
+                </ul>
+                <div className="mt-1.5 rounded-lg bg-card p-2 text-[10px]">
+                  <div className="mb-0.5 text-[9px] font-bold text-info">康复建议</div>
+                  {ai.suggestions.map((s, i) => (
+                    <div key={i}>· {s}</div>
+                  ))}
+                </div>
+              </div>
 
-          <div className="grid grid-cols-2 gap-0 border-t">
-            <button
-              onClick={() => onAddRecord(p)}
-              className="flex items-center justify-center gap-1 py-2.5 text-[11px] text-foreground active:bg-muted/40"
-            >
-              <PlusCircle className="h-3 w-3" />每日评估
+              <div className="grid grid-cols-2 gap-0 border-t">
+                <button
+                  onClick={() => onArchive(p)}
+                  className="flex items-center justify-center gap-1 py-2.5 text-[11px] text-foreground active:bg-muted/40"
+                >
+                  <FileSearch className="h-3 w-3" />患者档案
+                </button>
+                <button
+                  onClick={() => onAddRecord(p)}
+                  className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] font-medium text-primary active:bg-muted/40"
+                >
+                  <PlusCircle className="h-3 w-3" />术前评估
+                </button>
+              </div>
+            </div>
+          );
+        })}
+
+      {/* 术后康复：原有每日评估卡片 */}
+      {sub === "postop" &&
+        visible.map((p) => (
+          <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
+            <button onClick={() => onSelect(p)} className="block w-full border-b p-3 text-left">
+              <div className="flex items-center gap-1.5">
+                {p.bedNo ? (
+                  <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
+                    {p.bedNo}床
+                  </span>
+                ) : (
+                  <span className="rounded-md bg-info/10 px-1.5 py-0.5 text-[10px] font-bold text-info">门诊</span>
+                )}
+                <span className="text-sm font-bold">{p.name}</span>
+                <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
+                {p.status === "rehab" && p.department === "inpatient" && <Pill cls="bg-success/15 text-success">康复达标</Pill>}
+                {p.status === "post-op" && <Pill cls="bg-info/15 text-info">术后第 3 日</Pill>}
+                {p.status === "in-surgery" && <Pill cls="bg-warning/20 text-warning-foreground">今日术后</Pill>}
+              </div>
+              <div className="mt-1 text-[10px] text-muted-foreground">
+                {p.surgeryName ?? p.diagnosis}
+                {p.surgeryDate && ` · 术日 ${p.surgeryDate}`}
+              </div>
             </button>
-            {p.status === "rehab" ? (
+
+            <div className="grid grid-cols-2 gap-2 p-3">
+              <Metric label="疼痛 VAS" value="3/10" trend="down" />
+              <Metric label="屈膝角度" value="85°" trend="up" />
+              <Metric label="SLR" value="可独立" trend="up" />
+              <Metric label="是否下地" value={p.status === "in-surgery" ? "未" : "已下地"} trend="up" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-0 border-t">
               <button
-                onClick={() => onDischarge(p)}
-                className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] font-medium text-primary-foreground active:opacity-90"
-                style={{ background: "var(--gradient-primary)" }}
+                onClick={() => onAddRecord(p)}
+                className="flex items-center justify-center gap-1 py-2.5 text-[11px] text-foreground active:bg-muted/40"
               >
-                <CheckCircle2 className="h-3 w-3" />出院评估
+                <PlusCircle className="h-3 w-3" />每日评估
               </button>
-            ) : (
-              <button
-                onClick={() => onSelect(p)}
-                className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] text-primary active:bg-muted/40"
-              >
-                <FileText className="h-3 w-3" />历史评估
-              </button>
-            )}
+              {p.status === "rehab" ? (
+                <button
+                  onClick={() => onDischarge(p)}
+                  className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] font-medium text-primary-foreground active:opacity-90"
+                  style={{ background: "var(--gradient-primary)" }}
+                >
+                  <CheckCircle2 className="h-3 w-3" />出院评估
+                </button>
+              ) : (
+                <button
+                  onClick={() => onSelect(p)}
+                  className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] text-primary active:bg-muted/40"
+                >
+                  <FileText className="h-3 w-3" />历史评估
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
     </div>
   );
 }
@@ -851,148 +916,57 @@ function PlanStatusBadge({ status }: { status: PlanStatus }) {
   );
 }
 
-/* ---------- 手术确认（治疗师同步，与医疗团队展示一致） ---------- */
-function aiSurgConclusion(p: Patient): { recommendation: "go" | "hold"; summary: string; reasons: string[] } {
-  const abnormal = p.preOpFindings?.filter((f) => f.abnormal) ?? [];
-  if (abnormal.length === 0) {
+/* ---------- 明日手术患者 - AI 术前康复评估（基于疼痛、肿胀、ROM） ---------- */
+export function aiPreOpRehabAssessment(p: Patient): { level: "良好" | "尚可" | "欠佳"; tone: string; summary: string; reasons: string[]; suggestions: string[] } {
+  const s = p.preOpSymptoms;
+  if (!s) {
     return {
-      recommendation: "go",
-      summary: "AI 结论：建议如期手术",
-      reasons: ["术前各项检查指标均在正常范围", "无明显手术禁忌", "可按计划开展"],
+      level: "尚可",
+      tone: "text-info",
+      summary: "AI 术前评估：暂无症状数据",
+      reasons: ["未录入疼痛 / 肿胀 / 关节活动度等指标"],
+      suggestions: ["建议术前完成基础康复评估，便于制定术后方案"],
+    };
+  }
+  const issues: string[] = [];
+  if ((s.painVAS ?? 0) >= 5) issues.push(`疼痛 VAS ${s.painVAS}/10 偏高`);
+  if (s.swelling === "中" || s.swelling === "重") issues.push(`关节肿胀 ${s.swelling}度`);
+  if (s.rom && /0-([0-9]+)/.test(s.rom)) {
+    const m = s.rom.match(/0-([0-9]+)/);
+    if (m && parseInt(m[1]) < 100) issues.push(`关节活动度 ${s.rom} 受限`);
+  }
+  if (issues.length === 0) {
+    return {
+      level: "良好",
+      tone: "text-success",
+      summary: "AI 术前评估：康复条件良好",
+      reasons: ["疼痛轻、关节活动度满意、肌力充分"],
+      suggestions: ["可按计划手术，术后康复预后乐观", "术前继续维持现有训练强度"],
+    };
+  }
+  if (issues.length === 1) {
+    return {
+      level: "尚可",
+      tone: "text-warning-foreground",
+      summary: "AI 术前评估：康复条件尚可，需重点关注",
+      reasons: issues,
+      suggestions: [
+        "建议术前 1-2 日加强消肿与镇痛干预",
+        "术后注意尽早恢复关节活动度",
+      ],
     };
   }
   return {
-    recommendation: "hold",
-    summary: `AI 结论：建议暂缓手术（${abnormal.length} 项异常）`,
-    reasons: abnormal.map((a) => `${a.label} ${a.value} 偏离正常范围，建议复查或会诊`),
+    level: "欠佳",
+    tone: "text-destructive",
+    summary: `AI 术前评估：康复条件欠佳（${issues.length} 项异常）`,
+    reasons: issues,
+    suggestions: [
+      "建议与主刀沟通是否需延迟手术",
+      "术前先行消肿、止痛、ROM 强化训练",
+      "术后康复方案需更循序渐进",
+    ],
   };
-}
-
-function SurgConfirmTab({
-  list,
-  decisions,
-  onGo,
-  onHold,
-  onReturn,
-}: {
-  list: Patient[];
-  decisions: Record<string, SurgDecision | undefined>;
-  onGo: (p: Patient) => void;
-  onHold: (p: Patient) => void;
-  onReturn: (p: Patient) => void;
-}) {
-  return (
-    <div className="space-y-3 p-3">
-      <div className="rounded-2xl border bg-info/5 p-3 text-[11px] text-info">
-        <Sparkles className="mr-1 inline h-3 w-3" />
-        AI 已根据值班医生录入的术前量表给出结论，治疗师需确认患者是否满足手术条件，不满足则延迟手术。
-      </div>
-
-      {list.length === 0 && (
-        <div className="rounded-2xl border bg-card p-6 text-center text-[12px] text-muted-foreground">
-          暂无待确认手术
-        </div>
-      )}
-
-      {list.map((p) => {
-        const d = decisions[p.id];
-        const ai = aiSurgConclusion(p);
-        return (
-          <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
-            <div className="border-b p-3">
-              <div className="flex items-center gap-1.5">
-                <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
-                  {p.bedNo}床
-                </span>
-                <span className="text-sm font-bold">{p.name}</span>
-                <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
-                {p.side && (
-                  <span className="rounded bg-warning/20 px-1 py-0.5 text-[9px] font-bold text-warning-foreground">
-                    患侧 {p.side}
-                  </span>
-                )}
-              </div>
-              <div className="mt-1 text-[10px] text-muted-foreground">
-                {p.diagnosis} · {p.surgeryName} · {p.director}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-1 border-b p-3">
-              {p.preOpFindings?.map((f) => (
-                <span
-                  key={f.label}
-                  className={cn(
-                    "rounded-md px-1.5 py-0.5 text-[10px]",
-                    f.abnormal ? "bg-destructive/10 font-bold text-destructive" : "bg-muted text-muted-foreground",
-                  )}
-                >
-                  {f.label} {f.value}
-                </span>
-              ))}
-            </div>
-
-            <div className={cn("border-b p-3", ai.recommendation === "go" ? "bg-success/5" : "bg-destructive/5")}>
-              <div className={cn("flex items-center gap-1 text-[11px] font-bold", ai.recommendation === "go" ? "text-success" : "text-destructive")}>
-                <Sparkles className="h-3 w-3" />
-                {ai.summary}
-              </div>
-              <ul className="mt-1 space-y-0.5 pl-3 text-[10px] text-muted-foreground">
-                {ai.reasons.map((r, i) => (
-                  <li key={i} className="list-disc">{r}</li>
-                ))}
-              </ul>
-            </div>
-
-            {d === "go" && (
-              <div className="mx-3 mb-2 flex items-center gap-1.5 rounded-md bg-success/10 p-2 text-[10px] text-success">
-                <CheckCircle2 className="h-3 w-3" />已确认满足手术条件，已同步主刀
-              </div>
-            )}
-            {d === "hold" && (
-              <div className="mx-3 mb-2 flex items-center gap-1.5 rounded-md bg-warning/10 p-2 text-[10px] text-warning-foreground">
-                <AlertTriangle className="h-3 w-3" />已暂缓手术，理由已归档
-              </div>
-            )}
-            {d === "return" && (
-              <div className="mx-3 mb-2 flex items-center gap-1.5 rounded-md bg-destructive/10 p-2 text-[10px] text-destructive">
-                <Trash2 className="h-3 w-3" />已退回手术待排
-              </div>
-            )}
-
-            <div className="grid grid-cols-3 gap-0 border-t">
-              <button
-                onClick={() => onReturn(p)}
-                className={cn(
-                  "flex items-center justify-center gap-1 py-2.5 text-[11px] active:bg-muted/40",
-                  d === "return" ? "bg-destructive/10 font-medium text-destructive" : "text-foreground",
-                )}
-              >
-                <Trash2 className="h-3 w-3" />退回
-              </button>
-              <button
-                onClick={() => onHold(p)}
-                className={cn(
-                  "flex items-center justify-center gap-1 border-l py-2.5 text-[11px] active:bg-muted/40",
-                  d === "hold" ? "bg-warning/15 font-medium text-warning-foreground" : "text-foreground",
-                )}
-              >
-                <AlertTriangle className="h-3 w-3" />暂缓
-              </button>
-              <button
-                onClick={() => onGo(p)}
-                className={cn(
-                  "flex items-center justify-center gap-1 border-l py-2.5 text-[11px] active:bg-muted/40",
-                  d === "go" ? "bg-primary/10 font-medium text-primary" : "text-foreground",
-                )}
-              >
-                <CheckCircle2 className="h-3 w-3" />如期手术
-              </button>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
 }
 
 /* ---------- 出院备注 ---------- */

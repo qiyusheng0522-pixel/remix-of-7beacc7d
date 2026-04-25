@@ -78,6 +78,7 @@ export const patients: Patient[] = [
     responsibleTherapist: "朱年鑫",
     status: "rehab",
     department: "outpatient",
+    visitType: "first",
     notes: "门诊康复 · 每周 2 次",
   },
   {
@@ -92,6 +93,7 @@ export const patients: Patient[] = [
     responsibleTherapist: "朱年鑫",
     status: "rehab",
     department: "outpatient",
+    visitType: "revisit",
     notes: "门诊康复 · 力量训练阶段",
   },
 
@@ -121,6 +123,13 @@ export const patients: Patient[] = [
       { label: "膝关节肿胀", value: "中度", abnormal: true },
       { label: "屈膝活动度", value: "0-95°", abnormal: false },
     ],
+    preOpSymptoms: {
+      painVAS: 6,
+      swelling: "中",
+      rom: "0-95°",
+      strength: "股四头肌 4 级",
+      dailyFunction: "需扶拐行走，无法上下楼梯",
+    },
   },
   {
     id: "p6",
@@ -147,6 +156,13 @@ export const patients: Patient[] = [
       { label: "MRI", value: "外侧半月板桶柄撕裂", abnormal: true },
       { label: "屈膝交锁", value: "无", abnormal: false },
     ],
+    preOpSymptoms: {
+      painVAS: 4,
+      swelling: "轻",
+      rom: "0-110°",
+      strength: "股四头肌 4+ 级",
+      dailyFunction: "可缓慢平地行走，蹲起受限",
+    },
   },
   // 今日手术
   {
@@ -270,8 +286,6 @@ export const todayTasks: Record<string, TaskItem[]> = {
   ],
   therapist: [
     { id: "th1", title: "AI 康复方案确认", patientName: "孙顺英", bedNo: "03", priority: "high", type: "plan" },
-    { id: "th2", title: "术前康复评估确认（是否如期手术）", patientName: "刘德海", bedNo: "01", priority: "high", type: "preop-confirm" },
-    { id: "th3", title: "术前康复评估确认（是否如期手术）", patientName: "吴翠花", bedNo: "02", priority: "high", type: "preop-confirm" },
     { id: "th4", title: "康复出院评估咨询", patientName: "胡国玉", bedNo: "08", priority: "medium", type: "discharge" },
   ],
 };

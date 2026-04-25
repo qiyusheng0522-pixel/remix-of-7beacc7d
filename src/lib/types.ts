@@ -41,6 +41,16 @@ export interface Patient {
   notes?: string;
   followUpStatus?: "pending" | "done" | "needs-second";
   followUpResult?: string;
+  /** 门诊就诊类型：首诊 / 复诊 */
+  visitType?: "first" | "revisit";
+  /** 术前症状指标（疼痛 / 肿胀 / ROM 等，用于明日手术 AI 术前评估） */
+  preOpSymptoms?: {
+    painVAS?: number; // 0-10
+    swelling?: "无" | "轻" | "中" | "重";
+    rom?: string; // 例如 "0-95°"
+    strength?: string;
+    dailyFunction?: string;
+  };
 }
 
 export interface TaskItem {

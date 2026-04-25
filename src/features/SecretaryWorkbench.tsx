@@ -82,7 +82,7 @@ export function SecretaryWorkbench() {
           onChange={(k) => setTab(k as TabKey)}
           items={[
             { key: "home", label: "首页", icon: Home, badge: tasks.length },
-            { key: "outpatient", label: "门诊", icon: Hospital, badge: pendingAdmission.length },
+            { key: "outpatient", label: "待入", icon: Hospital, badge: pendingAdmission.length },
             { key: "inpatient", label: "住院", icon: BedDouble },
             { key: "followup", label: "随访", icon: HeartPulse, badge: followUpPending.length },
             { key: "me", label: "我的", icon: User },

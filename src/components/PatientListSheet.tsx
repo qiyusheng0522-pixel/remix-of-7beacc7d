@@ -22,13 +22,22 @@ export function PatientListSheet({
   onChat: (p: Patient) => void;
 }) {
   const [sub, setSub] = useState<"inpatient" | "outpatient">("inpatient");
+  const [outpatientSub, setOutpatientSub] = useState<"all" | "first" | "revisit">("all");
   const [keyword, setKeyword] = useState("");
   const [noteFor, setNoteFor] = useState<Patient | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
 
-  const list = (sub === "inpatient" ? inpatientList : outpatientList).filter(
+  const baseList = sub === "inpatient" ? inpatientList : outpatientList;
+  const filteredByVisitType =
+    sub === "outpatient" && outpatientSub !== "all"
+      ? baseList.filter((p) => p.visitType === outpatientSub)
+      : baseList;
+  const list = filteredByVisitType.filter(
     (p) => !keyword || p.name.includes(keyword) || p.bedNo?.includes(keyword),
   );
+
+  const firstCount = outpatientList.filter((p) => p.visitType === "first").length;
+  const revisitCount = outpatientList.filter((p) => p.visitType === "revisit").length;
 
   return (
     <div className="absolute inset-0 z-50 flex flex-col bg-background">
@@ -70,6 +79,30 @@ export function PatientListSheet({
             门诊 · {outpatientList.length}
           </button>
         </div>
+        {sub === "outpatient" && (
+          <div className="mt-2 flex gap-1.5">
+            {(
+              [
+                { k: "all", label: `全部 ${outpatientList.length}` },
+                { k: "first", label: `首诊 ${firstCount}` },
+                { k: "revisit", label: `复诊 ${revisitCount}` },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.k}
+                onClick={() => setOutpatientSub(opt.k)}
+                className={cn(
+                  "rounded-full px-2.5 py-0.5 text-[11px]",
+                  outpatientSub === opt.k
+                    ? "bg-primary text-primary-foreground"
+                    : "border bg-card text-muted-foreground active:bg-muted/40",
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 space-y-2 overflow-y-auto p-3">
@@ -91,6 +124,12 @@ export function PatientListSheet({
                 )}
                 <span className="text-sm font-bold">{p.name}</span>
                 <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
+                {p.visitType === "first" && (
+                  <span className="rounded bg-success/15 px-1 py-0.5 text-[9px] font-bold text-success">首诊</span>
+                )}
+                {p.visitType === "revisit" && (
+                  <span className="rounded bg-info/15 px-1 py-0.5 text-[9px] font-bold text-info">复诊</span>
+                )}
                 <ChevronRight className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
               </div>
               <div className="mt-1 text-[10px] text-muted-foreground">
