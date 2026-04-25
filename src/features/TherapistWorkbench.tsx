@@ -94,7 +94,6 @@ export function TherapistWorkbench() {
           onChange={(k) => setTab(k as TabKey)}
           items={[
             { key: "home", label: "首页", icon: Home, badge: tasks.length },
-            { key: "surg-confirm", label: "手术确认", icon: Calendar, badge: surgPending },
             { key: "plans", label: "康复方案", icon: HeartPulse, badge: myPatients.filter((p) => planStatuses[p.id] === "ai-draft").length },
             { key: "records", label: "院内评估", icon: FileText, badge: inpatientList.length },
             { key: "me", label: "我的", icon: User },
@@ -108,32 +107,10 @@ export function TherapistWorkbench() {
           inpatientCount={inpatientList.length}
           outpatientCount={outpatientList.length}
           planPendingCount={myPatients.filter((p) => planStatuses[p.id] === "ai-draft").length}
-          assessPendingCount={tasks.filter((t) => t.type === "preop-confirm" || t.type === "discharge").length}
           chatPendingCount={3}
-          surgConfirmPending={surgPending}
           onOpenPatients={() => setOverlay({ kind: "patient-list" })}
           onOpenPlans={() => setTab("plans")}
           onOpenRecords={() => setTab("records")}
-          onOpenSurgConfirm={() => setTab("surg-confirm")}
-          onQuick={(l) => showToast(`已打开 ${l}`)}
-        />
-      )}
-      {tab === "surg-confirm" && (
-        <SurgConfirmTab
-          list={tomorrowSurgery}
-          decisions={surgConfirms}
-          onGo={(p) => {
-            setSurgConfirms((s) => ({ ...s, [p.id]: "go" }));
-            showToast(`已确认如期康复介入：${p.name}`);
-          }}
-          onHold={(p) => {
-            setSurgConfirms((s) => ({ ...s, [p.id]: "hold" }));
-            showToast(`已暂缓 ${p.name}，已通知主刀医生`);
-          }}
-          onReturn={(p) => {
-            setSurgConfirms((s) => ({ ...s, [p.id]: "return" }));
-            showToast(`已退回 ${p.name}，待重新评估`);
-          }}
         />
       )}
       {tab === "plans" && (
