@@ -133,10 +133,11 @@ export function TherapistWorkbench() {
       {tab === "records" && (
         <RecordsTab
           inpatientList={inpatientList}
+          tomorrowSurgery={tomorrowSurgery}
           onSelect={(p) => setActionPatient(p)}
-          onAssess={(p) => showToast(`正在为 ${p.name} 进行康复评估...`)}
           onAddRecord={(p) => setRecordFor(p)}
           onDischarge={(p) => setOverlay({ kind: "discharge", patient: p })}
+          onArchive={(p) => setOverlay({ kind: "archive", patient: p })}
         />
       )}
       {tab === "me" && <MeTab />}
