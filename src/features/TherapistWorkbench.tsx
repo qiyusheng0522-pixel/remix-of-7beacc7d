@@ -499,93 +499,200 @@ function PlansTab({
 
 function RecordsTab({
   inpatientList,
+  tomorrowSurgery,
   onSelect,
-  onAssess,
   onAddRecord,
   onDischarge,
+  onArchive,
 }: {
   inpatientList: Patient[];
+  tomorrowSurgery: Patient[];
   onSelect: (p: Patient) => void;
-  onAssess: (p: Patient) => void;
   onAddRecord: (p: Patient) => void;
   onDischarge: (p: Patient) => void;
+  onArchive: (p: Patient) => void;
 }) {
-  const list = inpatientList;
+  const [sub, setSub] = useState<"tomorrow" | "postop">("postop");
+  // 术后康复 = 已手术 / 术后观察 / 康复中
+  const postOpList = inpatientList;
+  const visible = sub === "tomorrow" ? tomorrowSurgery : postOpList;
 
   return (
     <div className="space-y-3 p-3">
       <div className="rounded-2xl border bg-info/5 p-2.5 text-[11px] text-info">
         <ClipboardCheck className="mr-1 inline h-3 w-3" />
-        院内评估仅记录住院患者；门诊患者的康复记录请在「患者管理 → 患者档案」中查看。
+        住院康复分为「明日手术」（术前 AI 评估）与「术后康复」（每日评估）。
       </div>
 
-      <div className="flex items-center justify-between px-1">
-        <div className="text-[12px] font-semibold">住院康复 · {list.length} 例</div>
+      <div className="grid grid-cols-2 overflow-hidden rounded-full border bg-muted/30 p-0.5 text-[12px]">
+        <button
+          onClick={() => setSub("tomorrow")}
+          className={cn(
+            "rounded-full py-1.5 font-medium transition-colors",
+            sub === "tomorrow" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
+          )}
+        >
+          明日手术 · {tomorrowSurgery.length}
+        </button>
+        <button
+          onClick={() => setSub("postop")}
+          className={cn(
+            "rounded-full py-1.5 font-medium transition-colors",
+            sub === "postop" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
+          )}
+        >
+          术后康复 · {postOpList.length}
+        </button>
       </div>
 
-      {list.length === 0 && (
+      {visible.length === 0 && (
         <div className="rounded-2xl border bg-card p-6 text-center text-[12px] text-muted-foreground">
-          暂无住院康复患者
+          {sub === "tomorrow" ? "暂无明日手术患者" : "暂无术后康复患者"}
         </div>
       )}
 
-      {list.map((p) => (
-        <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
-          <button onClick={() => onSelect(p)} className="block w-full border-b p-3 text-left">
-            <div className="flex items-center gap-1.5">
-              {p.bedNo ? (
-                <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
-                  {p.bedNo}床
-                </span>
-              ) : (
-                <span className="rounded-md bg-info/10 px-1.5 py-0.5 text-[10px] font-bold text-info">门诊</span>
+      {/* 明日手术：展示患者基本信息 + AI 术前康复评估 */}
+      {sub === "tomorrow" &&
+        visible.map((p) => {
+          const ai = aiPreOpRehabAssessment(p);
+          const s = p.preOpSymptoms;
+          return (
+            <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
+              <button onClick={() => onArchive(p)} className="block w-full border-b p-3 text-left active:bg-muted/30">
+                <div className="flex items-center gap-1.5">
+                  <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
+                    {p.bedNo}床
+                  </span>
+                  <span className="text-sm font-bold">{p.name}</span>
+                  <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
+                  {p.side && (
+                    <span className="rounded bg-warning/20 px-1 py-0.5 text-[9px] font-bold text-warning-foreground">
+                      患侧 {p.side}
+                    </span>
+                  )}
+                  <span className="ml-auto rounded bg-info/15 px-1.5 py-0.5 text-[9px] font-bold text-info">
+                    明日手术
+                  </span>
+                </div>
+                <div className="mt-1 text-[10px] text-muted-foreground">
+                  {p.surgeryName} · 术日 {p.surgeryDate} · 主刀 {p.director}
+                </div>
+              </button>
+
+              {/* 术前症状指标 */}
+              {s && (
+                <div className="grid grid-cols-3 gap-2 border-b p-3">
+                  <Metric label="疼痛 VAS" value={`${s.painVAS ?? "—"}/10`} trend={(s.painVAS ?? 0) >= 5 ? "down" : "up"} />
+                  <Metric label="肿胀" value={s.swelling ?? "—"} trend={s.swelling === "中" || s.swelling === "重" ? "down" : "up"} />
+                  <Metric label="ROM" value={s.rom ?? "—"} trend="up" />
+                  {s.strength && <Metric label="肌力" value={s.strength} trend="up" />}
+                  {s.dailyFunction && (
+                    <div className="col-span-3 rounded-lg border bg-muted/20 p-2 text-[10px] text-muted-foreground">
+                      <span className="font-medium text-foreground">日常功能：</span>
+                      {s.dailyFunction}
+                    </div>
+                  )}
+                </div>
               )}
-              <span className="text-sm font-bold">{p.name}</span>
-              <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
-              {p.status === "rehab" && p.department === "inpatient" && <Pill cls="bg-success/15 text-success">康复达标</Pill>}
-              {p.status === "post-op" && <Pill cls="bg-info/15 text-info">术后第 3 日</Pill>}
-              {p.status === "in-surgery" && <Pill cls="bg-warning/20 text-warning-foreground">今日术后</Pill>}
-              {p.status === "rehab" && p.department === "outpatient" && <Pill cls="bg-info/15 text-info">门诊康复</Pill>}
-            </div>
-            <div className="mt-1 text-[10px] text-muted-foreground">
-              {p.surgeryName ?? p.diagnosis}
-              {p.surgeryDate && ` · 术日 ${p.surgeryDate}`}
-            </div>
-          </button>
 
-          <div className="grid grid-cols-2 gap-2 p-3">
-            <Metric label="疼痛 VAS" value="3/10" trend="down" />
-            <Metric label="屈膝角度" value="85°" trend="up" />
-            <Metric label="SLR" value="可独立" trend="up" />
-            <Metric label="是否下地" value={p.status === "in-surgery" ? "未" : "已下地"} trend="up" />
-          </div>
+              {/* AI 术前评估结论 */}
+              <div className={cn(
+                "border-b p-3",
+                ai.level === "良好" ? "bg-success/5" : ai.level === "尚可" ? "bg-warning/5" : "bg-destructive/5",
+              )}>
+                <div className={cn("flex items-center gap-1 text-[11px] font-bold", ai.tone)}>
+                  <SparklesIcon className="h-3 w-3" />
+                  {ai.summary}
+                </div>
+                <ul className="mt-1 space-y-0.5 pl-3 text-[10px] text-muted-foreground">
+                  {ai.reasons.map((r, i) => (
+                    <li key={i} className="list-disc">{r}</li>
+                  ))}
+                </ul>
+                <div className="mt-1.5 rounded-lg bg-card p-2 text-[10px]">
+                  <div className="mb-0.5 text-[9px] font-bold text-info">康复建议</div>
+                  {ai.suggestions.map((s, i) => (
+                    <div key={i}>· {s}</div>
+                  ))}
+                </div>
+              </div>
 
-          <div className="grid grid-cols-2 gap-0 border-t">
-            <button
-              onClick={() => onAddRecord(p)}
-              className="flex items-center justify-center gap-1 py-2.5 text-[11px] text-foreground active:bg-muted/40"
-            >
-              <PlusCircle className="h-3 w-3" />每日评估
+              <div className="grid grid-cols-2 gap-0 border-t">
+                <button
+                  onClick={() => onArchive(p)}
+                  className="flex items-center justify-center gap-1 py-2.5 text-[11px] text-foreground active:bg-muted/40"
+                >
+                  <FileSearch className="h-3 w-3" />患者档案
+                </button>
+                <button
+                  onClick={() => onAddRecord(p)}
+                  className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] font-medium text-primary active:bg-muted/40"
+                >
+                  <PlusCircle className="h-3 w-3" />术前评估
+                </button>
+              </div>
+            </div>
+          );
+        })}
+
+      {/* 术后康复：原有每日评估卡片 */}
+      {sub === "postop" &&
+        visible.map((p) => (
+          <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
+            <button onClick={() => onSelect(p)} className="block w-full border-b p-3 text-left">
+              <div className="flex items-center gap-1.5">
+                {p.bedNo ? (
+                  <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
+                    {p.bedNo}床
+                  </span>
+                ) : (
+                  <span className="rounded-md bg-info/10 px-1.5 py-0.5 text-[10px] font-bold text-info">门诊</span>
+                )}
+                <span className="text-sm font-bold">{p.name}</span>
+                <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
+                {p.status === "rehab" && p.department === "inpatient" && <Pill cls="bg-success/15 text-success">康复达标</Pill>}
+                {p.status === "post-op" && <Pill cls="bg-info/15 text-info">术后第 3 日</Pill>}
+                {p.status === "in-surgery" && <Pill cls="bg-warning/20 text-warning-foreground">今日术后</Pill>}
+              </div>
+              <div className="mt-1 text-[10px] text-muted-foreground">
+                {p.surgeryName ?? p.diagnosis}
+                {p.surgeryDate && ` · 术日 ${p.surgeryDate}`}
+              </div>
             </button>
-            {p.status === "rehab" ? (
+
+            <div className="grid grid-cols-2 gap-2 p-3">
+              <Metric label="疼痛 VAS" value="3/10" trend="down" />
+              <Metric label="屈膝角度" value="85°" trend="up" />
+              <Metric label="SLR" value="可独立" trend="up" />
+              <Metric label="是否下地" value={p.status === "in-surgery" ? "未" : "已下地"} trend="up" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-0 border-t">
               <button
-                onClick={() => onDischarge(p)}
-                className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] font-medium text-primary-foreground active:opacity-90"
-                style={{ background: "var(--gradient-primary)" }}
+                onClick={() => onAddRecord(p)}
+                className="flex items-center justify-center gap-1 py-2.5 text-[11px] text-foreground active:bg-muted/40"
               >
-                <CheckCircle2 className="h-3 w-3" />出院评估
+                <PlusCircle className="h-3 w-3" />每日评估
               </button>
-            ) : (
-              <button
-                onClick={() => onSelect(p)}
-                className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] text-primary active:bg-muted/40"
-              >
-                <FileText className="h-3 w-3" />历史评估
-              </button>
-            )}
+              {p.status === "rehab" ? (
+                <button
+                  onClick={() => onDischarge(p)}
+                  className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] font-medium text-primary-foreground active:opacity-90"
+                  style={{ background: "var(--gradient-primary)" }}
+                >
+                  <CheckCircle2 className="h-3 w-3" />出院评估
+                </button>
+              ) : (
+                <button
+                  onClick={() => onSelect(p)}
+                  className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] text-primary active:bg-muted/40"
+                >
+                  <FileText className="h-3 w-3" />历史评估
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
     </div>
   );
 }
