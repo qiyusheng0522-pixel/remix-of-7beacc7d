@@ -78,6 +78,7 @@ export const patients: Patient[] = [
     responsibleTherapist: "朱年鑫",
     status: "rehab",
     department: "outpatient",
+    visitType: "first",
     notes: "门诊康复 · 每周 2 次",
   },
   {
@@ -92,6 +93,7 @@ export const patients: Patient[] = [
     responsibleTherapist: "朱年鑫",
     status: "rehab",
     department: "outpatient",
+    visitType: "revisit",
     notes: "门诊康复 · 力量训练阶段",
   },
 
