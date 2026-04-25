@@ -22,13 +22,22 @@ export function PatientListSheet({
   onChat: (p: Patient) => void;
 }) {
   const [sub, setSub] = useState<"inpatient" | "outpatient">("inpatient");
+  const [outpatientSub, setOutpatientSub] = useState<"all" | "first" | "revisit">("all");
   const [keyword, setKeyword] = useState("");
   const [noteFor, setNoteFor] = useState<Patient | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
 
-  const list = (sub === "inpatient" ? inpatientList : outpatientList).filter(
+  const baseList = sub === "inpatient" ? inpatientList : outpatientList;
+  const filteredByVisitType =
+    sub === "outpatient" && outpatientSub !== "all"
+      ? baseList.filter((p) => p.visitType === outpatientSub)
+      : baseList;
+  const list = filteredByVisitType.filter(
     (p) => !keyword || p.name.includes(keyword) || p.bedNo?.includes(keyword),
   );
+
+  const firstCount = outpatientList.filter((p) => p.visitType === "first").length;
+  const revisitCount = outpatientList.filter((p) => p.visitType === "revisit").length;
 
   return (
     <div className="absolute inset-0 z-50 flex flex-col bg-background">
