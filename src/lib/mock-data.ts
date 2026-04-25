@@ -123,6 +123,13 @@ export const patients: Patient[] = [
       { label: "膝关节肿胀", value: "中度", abnormal: true },
       { label: "屈膝活动度", value: "0-95°", abnormal: false },
     ],
+    preOpSymptoms: {
+      painVAS: 6,
+      swelling: "中",
+      rom: "0-95°",
+      strength: "股四头肌 4 级",
+      dailyFunction: "需扶拐行走，无法上下楼梯",
+    },
   },
   {
     id: "p6",
