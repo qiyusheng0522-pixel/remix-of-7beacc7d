@@ -601,7 +601,7 @@ function RecordsTab({
                 ai.level === "良好" ? "bg-success/5" : ai.level === "尚可" ? "bg-warning/5" : "bg-destructive/5",
               )}>
                 <div className={cn("flex items-center gap-1 text-[11px] font-bold", ai.tone)}>
-                  <SparklesIcon className="h-3 w-3" />
+                  <Sparkles className="h-3 w-3" />
                   {ai.summary}
                 </div>
                 <ul className="mt-1 space-y-0.5 pl-3 text-[10px] text-muted-foreground">
