@@ -808,148 +808,57 @@ function PlanStatusBadge({ status }: { status: PlanStatus }) {
   );
 }
 
-/* ---------- 手术确认（治疗师同步，与医疗团队展示一致） ---------- */
-function aiSurgConclusion(p: Patient): { recommendation: "go" | "hold"; summary: string; reasons: string[] } {
-  const abnormal = p.preOpFindings?.filter((f) => f.abnormal) ?? [];
-  if (abnormal.length === 0) {
+/* ---------- 明日手术患者 - AI 术前康复评估（基于疼痛、肿胀、ROM） ---------- */
+export function aiPreOpRehabAssessment(p: Patient): { level: "良好" | "尚可" | "欠佳"; tone: string; summary: string; reasons: string[]; suggestions: string[] } {
+  const s = p.preOpSymptoms;
+  if (!s) {
     return {
-      recommendation: "go",
-      summary: "AI 结论：建议如期手术",
-      reasons: ["术前各项检查指标均在正常范围", "无明显手术禁忌", "可按计划开展"],
+      level: "尚可",
+      tone: "text-info",
+      summary: "AI 术前评估：暂无症状数据",
+      reasons: ["未录入疼痛 / 肿胀 / 关节活动度等指标"],
+      suggestions: ["建议术前完成基础康复评估，便于制定术后方案"],
+    };
+  }
+  const issues: string[] = [];
+  if ((s.painVAS ?? 0) >= 5) issues.push(`疼痛 VAS ${s.painVAS}/10 偏高`);
+  if (s.swelling === "中" || s.swelling === "重") issues.push(`关节肿胀 ${s.swelling}度`);
+  if (s.rom && /0-([0-9]+)/.test(s.rom)) {
+    const m = s.rom.match(/0-([0-9]+)/);
+    if (m && parseInt(m[1]) < 100) issues.push(`关节活动度 ${s.rom} 受限`);
+  }
+  if (issues.length === 0) {
+    return {
+      level: "良好",
+      tone: "text-success",
+      summary: "AI 术前评估：康复条件良好",
+      reasons: ["疼痛轻、关节活动度满意、肌力充分"],
+      suggestions: ["可按计划手术，术后康复预后乐观", "术前继续维持现有训练强度"],
+    };
+  }
+  if (issues.length === 1) {
+    return {
+      level: "尚可",
+      tone: "text-warning-foreground",
+      summary: "AI 术前评估：康复条件尚可，需重点关注",
+      reasons: issues,
+      suggestions: [
+        "建议术前 1-2 日加强消肿与镇痛干预",
+        "术后注意尽早恢复关节活动度",
+      ],
     };
   }
   return {
-    recommendation: "hold",
-    summary: `AI 结论：建议暂缓手术（${abnormal.length} 项异常）`,
-    reasons: abnormal.map((a) => `${a.label} ${a.value} 偏离正常范围，建议复查或会诊`),
+    level: "欠佳",
+    tone: "text-destructive",
+    summary: `AI 术前评估：康复条件欠佳（${issues.length} 项异常）`,
+    reasons: issues,
+    suggestions: [
+      "建议与主刀沟通是否需延迟手术",
+      "术前先行消肿、止痛、ROM 强化训练",
+      "术后康复方案需更循序渐进",
+    ],
   };
-}
-
-function SurgConfirmTab({
-  list,
-  decisions,
-  onGo,
-  onHold,
-  onReturn,
-}: {
-  list: Patient[];
-  decisions: Record<string, SurgDecision | undefined>;
-  onGo: (p: Patient) => void;
-  onHold: (p: Patient) => void;
-  onReturn: (p: Patient) => void;
-}) {
-  return (
-    <div className="space-y-3 p-3">
-      <div className="rounded-2xl border bg-info/5 p-3 text-[11px] text-info">
-        <Sparkles className="mr-1 inline h-3 w-3" />
-        AI 已根据值班医生录入的术前量表给出结论，治疗师需确认患者是否满足手术条件，不满足则延迟手术。
-      </div>
-
-      {list.length === 0 && (
-        <div className="rounded-2xl border bg-card p-6 text-center text-[12px] text-muted-foreground">
-          暂无待确认手术
-        </div>
-      )}
-
-      {list.map((p) => {
-        const d = decisions[p.id];
-        const ai = aiSurgConclusion(p);
-        return (
-          <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
-            <div className="border-b p-3">
-              <div className="flex items-center gap-1.5">
-                <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
-                  {p.bedNo}床
-                </span>
-                <span className="text-sm font-bold">{p.name}</span>
-                <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
-                {p.side && (
-                  <span className="rounded bg-warning/20 px-1 py-0.5 text-[9px] font-bold text-warning-foreground">
-                    患侧 {p.side}
-                  </span>
-                )}
-              </div>
-              <div className="mt-1 text-[10px] text-muted-foreground">
-                {p.diagnosis} · {p.surgeryName} · {p.director}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-1 border-b p-3">
-              {p.preOpFindings?.map((f) => (
-                <span
-                  key={f.label}
-                  className={cn(
-                    "rounded-md px-1.5 py-0.5 text-[10px]",
-                    f.abnormal ? "bg-destructive/10 font-bold text-destructive" : "bg-muted text-muted-foreground",
-                  )}
-                >
-                  {f.label} {f.value}
-                </span>
-              ))}
-            </div>
-
-            <div className={cn("border-b p-3", ai.recommendation === "go" ? "bg-success/5" : "bg-destructive/5")}>
-              <div className={cn("flex items-center gap-1 text-[11px] font-bold", ai.recommendation === "go" ? "text-success" : "text-destructive")}>
-                <Sparkles className="h-3 w-3" />
-                {ai.summary}
-              </div>
-              <ul className="mt-1 space-y-0.5 pl-3 text-[10px] text-muted-foreground">
-                {ai.reasons.map((r, i) => (
-                  <li key={i} className="list-disc">{r}</li>
-                ))}
-              </ul>
-            </div>
-
-            {d === "go" && (
-              <div className="mx-3 mb-2 flex items-center gap-1.5 rounded-md bg-success/10 p-2 text-[10px] text-success">
-                <CheckCircle2 className="h-3 w-3" />已确认满足手术条件，已同步主刀
-              </div>
-            )}
-            {d === "hold" && (
-              <div className="mx-3 mb-2 flex items-center gap-1.5 rounded-md bg-warning/10 p-2 text-[10px] text-warning-foreground">
-                <AlertTriangle className="h-3 w-3" />已暂缓手术，理由已归档
-              </div>
-            )}
-            {d === "return" && (
-              <div className="mx-3 mb-2 flex items-center gap-1.5 rounded-md bg-destructive/10 p-2 text-[10px] text-destructive">
-                <Trash2 className="h-3 w-3" />已退回手术待排
-              </div>
-            )}
-
-            <div className="grid grid-cols-3 gap-0 border-t">
-              <button
-                onClick={() => onReturn(p)}
-                className={cn(
-                  "flex items-center justify-center gap-1 py-2.5 text-[11px] active:bg-muted/40",
-                  d === "return" ? "bg-destructive/10 font-medium text-destructive" : "text-foreground",
-                )}
-              >
-                <Trash2 className="h-3 w-3" />退回
-              </button>
-              <button
-                onClick={() => onHold(p)}
-                className={cn(
-                  "flex items-center justify-center gap-1 border-l py-2.5 text-[11px] active:bg-muted/40",
-                  d === "hold" ? "bg-warning/15 font-medium text-warning-foreground" : "text-foreground",
-                )}
-              >
-                <AlertTriangle className="h-3 w-3" />暂缓
-              </button>
-              <button
-                onClick={() => onGo(p)}
-                className={cn(
-                  "flex items-center justify-center gap-1 border-l py-2.5 text-[11px] active:bg-muted/40",
-                  d === "go" ? "bg-primary/10 font-medium text-primary" : "text-foreground",
-                )}
-              >
-                <CheckCircle2 className="h-3 w-3" />如期手术
-              </button>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
 }
 
 /* ---------- 出院备注 ---------- */
