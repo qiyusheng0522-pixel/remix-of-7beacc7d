@@ -445,10 +445,10 @@ function SummaryView({
           <div className="grid grid-cols-3 gap-1.5">
             <RecOption
               icon={Stethoscope}
-              label="值班医生"
+              label="手术医疗团队"
               active={rec.kind === "doctor"}
               onClick={() =>
-                onChange({ kind: "doctor", reason: "存在术后异常，需医生评估" })
+                onChange({ kind: "doctor", reason: "存在术后异常，需手术医疗团队评估" })
               }
             />
             <RecOption
@@ -461,9 +461,9 @@ function SummaryView({
             />
             <RecOption
               icon={CheckCircle2}
-              label="本科室留观"
+              label="护理"
               active={rec.kind === "self"}
-              onClick={() => onChange({ kind: "self", reason: "无异常，留观随访" })}
+              onClick={() => onChange({ kind: "self", reason: "无异常，护理留观随访" })}
             />
           </div>
         </div>
