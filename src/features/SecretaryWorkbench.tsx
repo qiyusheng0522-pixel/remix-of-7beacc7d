@@ -198,7 +198,7 @@ function HomeTab({
   pendingCount: number;
   inpatientCount: number;
   followUpCount: number;
-  onQuick: (key: "ocr" | "handover" | "vitals" | "education" | "followup") => void;
+  onQuick: (key: "ocr" | "handover" | "vitals" | "education" | "followup" | "chat") => void;
   onTask: (taskType: string) => void;
   onJumpOutpatient: () => void;
   onJumpInpatient: () => void;
