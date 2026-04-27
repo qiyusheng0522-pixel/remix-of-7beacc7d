@@ -605,7 +605,7 @@ function buildSummary(turns: DialogTurn[]): Partial<SessionState> {
 
   let recommendation: SessionState["recommendation"];
   if (/红|渗液|发热|低烧|37\.|38\./.test(text) || /6 分|7 分|8 分/.test(text)) {
-    recommendation = { kind: "doctor", reason: "出现发热/疼痛加重，建议值班医生评估" };
+    recommendation = { kind: "doctor", reason: "出现发热/疼痛加重，建议手术医疗团队评估" };
   } else if (/30°|僵|受限/.test(text)) {
     recommendation = { kind: "therapist", reason: "ROM 受限，需康复治疗师介入" };
   } else {
