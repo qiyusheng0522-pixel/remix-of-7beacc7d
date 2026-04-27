@@ -163,10 +163,10 @@ export function FollowUpSheet({
     if (!session?.recommendation) return;
     const target =
       session.recommendation.kind === "doctor"
-        ? `值班医生 (${session.patient.responsibleDoctor ?? "朱医生"})`
+        ? `手术医疗团队 (${session.patient.responsibleDoctor ?? "朱医生"})`
         : session.recommendation.kind === "therapist"
           ? `康复治疗师 (${session.patient.responsibleTherapist ?? "朱年鑫"})`
-          : "本科室留观";
+          : "护理";
     onPushTo(`已推送至 ${target} 沟通模块`);
     setStage("list");
     setSession(null);
