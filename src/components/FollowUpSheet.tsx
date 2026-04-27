@@ -163,10 +163,10 @@ export function FollowUpSheet({
     if (!session?.recommendation) return;
     const target =
       session.recommendation.kind === "doctor"
-        ? `值班医生 (${session.patient.responsibleDoctor ?? "朱医生"})`
+        ? `手术医疗团队 (${session.patient.responsibleDoctor ?? "朱医生"})`
         : session.recommendation.kind === "therapist"
           ? `康复治疗师 (${session.patient.responsibleTherapist ?? "朱年鑫"})`
-          : "本科室留观";
+          : "护理";
     onPushTo(`已推送至 ${target} 沟通模块`);
     setStage("list");
     setSession(null);
@@ -445,10 +445,10 @@ function SummaryView({
           <div className="grid grid-cols-3 gap-1.5">
             <RecOption
               icon={Stethoscope}
-              label="值班医生"
+              label="手术医疗团队"
               active={rec.kind === "doctor"}
               onClick={() =>
-                onChange({ kind: "doctor", reason: "存在术后异常，需医生评估" })
+                onChange({ kind: "doctor", reason: "存在术后异常，需手术医疗团队评估" })
               }
             />
             <RecOption
@@ -461,9 +461,9 @@ function SummaryView({
             />
             <RecOption
               icon={CheckCircle2}
-              label="本科室留观"
+              label="护理"
               active={rec.kind === "self"}
-              onClick={() => onChange({ kind: "self", reason: "无异常，留观随访" })}
+              onClick={() => onChange({ kind: "self", reason: "无异常，护理留观随访" })}
             />
           </div>
         </div>
@@ -605,7 +605,7 @@ function buildSummary(turns: DialogTurn[]): Partial<SessionState> {
 
   let recommendation: SessionState["recommendation"];
   if (/红|渗液|发热|低烧|37\.|38\./.test(text) || /6 分|7 分|8 分/.test(text)) {
-    recommendation = { kind: "doctor", reason: "出现发热/疼痛加重，建议值班医生评估" };
+    recommendation = { kind: "doctor", reason: "出现发热/疼痛加重，建议手术医疗团队评估" };
   } else if (/30°|僵|受限/.test(text)) {
     recommendation = { kind: "therapist", reason: "ROM 受限，需康复治疗师介入" };
   } else {

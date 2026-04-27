@@ -635,65 +635,179 @@ function RecordsTab({
           );
         })}
 
-      {/* 术后康复：原有每日评估卡片 */}
-      {sub === "postop" &&
-        visible.map((p) => (
-          <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
-            <button onClick={() => onSelect(p)} className="block w-full border-b p-3 text-left">
-              <div className="flex items-center gap-1.5">
-                {p.bedNo ? (
-                  <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
-                    {p.bedNo}床
-                  </span>
-                ) : (
-                  <span className="rounded-md bg-info/10 px-1.5 py-0.5 text-[10px] font-bold text-info">门诊</span>
-                )}
-                <span className="text-sm font-bold">{p.name}</span>
-                <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
-                {p.status === "rehab" && p.department === "inpatient" && <Pill cls="bg-success/15 text-success">康复达标</Pill>}
-                {p.status === "post-op" && <Pill cls="bg-info/15 text-info">术后第 3 日</Pill>}
-                {p.status === "in-surgery" && <Pill cls="bg-warning/20 text-warning-foreground">今日术后</Pill>}
-              </div>
-              <div className="mt-1 text-[10px] text-muted-foreground">
-                {p.surgeryName ?? p.diagnosis}
-                {p.surgeryDate && ` · 术日 ${p.surgeryDate}`}
-              </div>
-            </button>
+      {/* 术后康复：增加筛选与排序 */}
+      {sub === "postop" && <PostOpList list={visible} onSelect={onSelect} onAddRecord={onAddRecord} onDischarge={onDischarge} />}
+    </div>
+  );
+}
 
-            <div className="grid grid-cols-2 gap-2 p-3">
-              <Metric label="疼痛 VAS" value="3/10" trend="down" />
-              <Metric label="屈膝角度" value="85°" trend="up" />
-              <Metric label="SLR" value="可独立" trend="up" />
-              <Metric label="是否下地" value={p.status === "in-surgery" ? "未" : "已下地"} trend="up" />
+/* ---------- 术后康复列表（含状态/病症筛选 + 时间排序） ---------- */
+function PostOpList({
+  list,
+  onSelect,
+  onAddRecord,
+  onDischarge,
+}: {
+  list: Patient[];
+  onSelect: (p: Patient) => void;
+  onAddRecord: (p: Patient) => void;
+  onDischarge: (p: Patient) => void;
+}) {
+  const [statusFilter, setStatusFilter] = useState<"all" | "in-surgery" | "post-op" | "rehab">("all");
+  const [diseaseFilter, setDiseaseFilter] = useState<string>("all");
+  const [sort, setSort] = useState<"surgery-asc" | "surgery-desc" | "postdays-desc">("postdays-desc");
+
+  // 提取所有"病症"（按 diagnosis 简短关键字）
+  const diseases = Array.from(
+    new Set(list.map((p) => (p.diagnosis ?? "").split(/[,，;；]/)[0].trim()).filter(Boolean)),
+  );
+
+  // 计算 周几 与 术后 X 天
+  const today = new Date("2024-04-22");
+  const weekdayCN = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+  const enrich = (p: Patient) => {
+    const d = p.surgeryDate ? new Date(p.surgeryDate) : null;
+    const days = d ? Math.max(0, Math.floor((today.getTime() - d.getTime()) / 86400000)) : 0;
+    const wk = d ? weekdayCN[d.getDay()] : "—";
+    return { p, days, wk, dateNum: d ? d.getTime() : 0 };
+  };
+
+  let rows = list.map(enrich);
+  if (statusFilter !== "all") rows = rows.filter((r) => r.p.status === statusFilter);
+  if (diseaseFilter !== "all") rows = rows.filter((r) => (r.p.diagnosis ?? "").includes(diseaseFilter));
+  if (sort === "surgery-asc") rows.sort((a, b) => a.dateNum - b.dateNum);
+  else if (sort === "surgery-desc") rows.sort((a, b) => b.dateNum - a.dateNum);
+  else rows.sort((a, b) => b.days - a.days);
+
+  return (
+    <>
+      {/* 快速筛选 */}
+      <div className="space-y-1.5 rounded-2xl border bg-card p-2.5">
+        <FilterRow label="状态">
+          {[
+            { k: "all", l: "全部" },
+            { k: "in-surgery", l: "今日术后" },
+            { k: "post-op", l: "术后观察" },
+            { k: "rehab", l: "康复中" },
+          ].map((o) => (
+            <Chip key={o.k} active={statusFilter === o.k} onClick={() => setStatusFilter(o.k as typeof statusFilter)}>
+              {o.l}
+            </Chip>
+          ))}
+        </FilterRow>
+        {diseases.length > 0 && (
+          <FilterRow label="病症">
+            <Chip active={diseaseFilter === "all"} onClick={() => setDiseaseFilter("all")}>全部</Chip>
+            {diseases.map((d) => (
+              <Chip key={d} active={diseaseFilter === d} onClick={() => setDiseaseFilter(d)}>
+                {d}
+              </Chip>
+            ))}
+          </FilterRow>
+        )}
+        <FilterRow label="排序">
+          <Chip active={sort === "postdays-desc"} onClick={() => setSort("postdays-desc")}>术后天数 ↓</Chip>
+          <Chip active={sort === "surgery-desc"} onClick={() => setSort("surgery-desc")}>手术日期 ↓</Chip>
+          <Chip active={sort === "surgery-asc"} onClick={() => setSort("surgery-asc")}>手术日期 ↑</Chip>
+        </FilterRow>
+      </div>
+
+      {rows.length === 0 && (
+        <div className="rounded-2xl border bg-card p-6 text-center text-[12px] text-muted-foreground">
+          无符合条件的患者
+        </div>
+      )}
+
+      {rows.map(({ p, days, wk }) => (
+        <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
+          <button onClick={() => onSelect(p)} className="block w-full border-b p-3 text-left">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {p.bedNo ? (
+                <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
+                  {p.bedNo}床
+                </span>
+              ) : (
+                <span className="rounded-md bg-info/10 px-1.5 py-0.5 text-[10px] font-bold text-info">门诊</span>
+              )}
+              <span className="text-sm font-bold">{p.name}</span>
+              <span className="text-[10px] text-muted-foreground">{p.gender}·{p.age}</span>
+              {p.side && (
+                <span className="rounded bg-warning/20 px-1 py-0.5 text-[9px] font-bold text-warning-foreground">
+                  患侧 {p.side}
+                </span>
+              )}
+              {p.status === "rehab" && p.department === "inpatient" && <Pill cls="bg-success/15 text-success">康复达标</Pill>}
+              {p.status === "post-op" && <Pill cls="bg-info/15 text-info">术后观察</Pill>}
+              {p.status === "in-surgery" && <Pill cls="bg-warning/20 text-warning-foreground">今日术后</Pill>}
             </div>
+            <div className="mt-1 text-[10px] text-muted-foreground">
+              {p.surgeryName ?? p.diagnosis}
+            </div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
+              {p.surgeryDate && <span>手术日 {p.surgeryDate}（{wk}）</span>}
+              <span>· 术后第 {days} 天</span>
+            </div>
+          </button>
 
-            <div className="grid grid-cols-2 gap-0 border-t">
+          <div className="grid grid-cols-2 gap-2 p-3">
+            <Metric label="疼痛 VAS" value="3/10" trend="down" />
+            <Metric label="屈膝角度" value="85°" trend="up" />
+            <Metric label="SLR" value="可独立" trend="up" />
+            <Metric label="是否下地" value={p.status === "in-surgery" ? "未" : "已下地"} trend="up" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-0 border-t">
+            <button
+              onClick={() => onAddRecord(p)}
+              className="flex items-center justify-center gap-1 py-2.5 text-[11px] text-foreground active:bg-muted/40"
+            >
+              <PlusCircle className="h-3 w-3" />治疗记录
+            </button>
+            {p.status === "rehab" ? (
+              <button
+                onClick={() => onDischarge(p)}
+                className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] font-medium text-primary-foreground active:opacity-90"
+                style={{ background: "var(--gradient-primary)" }}
+              >
+                <CheckCircle2 className="h-3 w-3" />出院评估
+              </button>
+            ) : (
               <button
                 onClick={() => onAddRecord(p)}
-                className="flex items-center justify-center gap-1 py-2.5 text-[11px] text-foreground active:bg-muted/40"
+                className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] font-medium text-primary active:bg-muted/40"
               >
-                <PlusCircle className="h-3 w-3" />每日评估
+                <PlusCircle className="h-3 w-3" />治疗记录
               </button>
-              {p.status === "rehab" ? (
-                <button
-                  onClick={() => onDischarge(p)}
-                  className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] font-medium text-primary-foreground active:opacity-90"
-                  style={{ background: "var(--gradient-primary)" }}
-                >
-                  <CheckCircle2 className="h-3 w-3" />出院评估
-                </button>
-              ) : (
-                <button
-                  onClick={() => onSelect(p)}
-                  className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] text-primary active:bg-muted/40"
-                >
-                  <FileText className="h-3 w-3" />历史评估
-                </button>
-              )}
-            </div>
+            )}
           </div>
-        ))}
+        </div>
+      ))}
+    </>
+  );
+}
+
+function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-1.5">
+      <div className="mt-1 w-9 shrink-0 text-[10px] font-medium text-muted-foreground">{label}</div>
+      <div className="flex flex-wrap gap-1">{children}</div>
     </div>
+  );
+}
+
+function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "rounded-full border px-2 py-0.5 text-[10px] transition-colors",
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border bg-card text-foreground active:bg-muted/40",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 
