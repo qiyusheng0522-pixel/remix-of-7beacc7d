@@ -231,6 +231,28 @@ function HomeTab({
         <QuickAction icon={BellRing} label="宣教推送" tone="bg-success/15 text-success" onClick={() => onQuick("education")} />
       </div>
 
+      <button
+        onClick={() => onQuick("chat")}
+        className="flex w-full items-center gap-2.5 rounded-2xl border bg-card p-3 text-left active:bg-muted/30"
+        style={{ boxShadow: "var(--shadow-card)" }}
+      >
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-success/15 text-success">
+          <MessageCircle className="h-4 w-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[12px] font-semibold">患者沟通</span>
+            <span className="rounded-full bg-destructive px-1.5 py-0.5 text-[9px] font-bold text-destructive-foreground">
+              5
+            </span>
+          </div>
+          <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
+            5 条未处理消息 · 涉及 3 位患者
+          </div>
+        </div>
+        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+      </button>
+
       <Card title="今日待办" rightLabel={`${tasks.length} 项`}>
         <div className="divide-y">
           {tasks.map((t) => (
