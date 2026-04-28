@@ -99,7 +99,11 @@ export function SurgicalTeamWorkbench() {
         />
       )}
       {tab === "chat" && (
-        <ChatListTab list={myPatients} onOpen={(p) => setChatPatient(p)} onOpenAll={() => setShowPatientList(true)} />
+        <PatientChatListView
+          patients={myPatients}
+          unread={{ [myPatients[0]?.id ?? ""]: 2, [myPatients[1]?.id ?? ""]: 1 }}
+          onOpen={(p) => setChatPatient(p)}
+        />
       )}
       {tab === "me" && <MeTab />}
 
