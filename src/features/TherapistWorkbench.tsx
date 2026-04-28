@@ -201,6 +201,15 @@ export function TherapistWorkbench() {
           onChat={(p) => setOverlay({ kind: "chat", patient: p })}
         />
       )}
+      {overlay?.kind === "chat-list" && (
+        <PatientChatListSheet
+          subtitle="与负责患者直接沟通"
+          patients={myPatients}
+          unread={{ [myPatients[0]?.id ?? ""]: 2, [myPatients[1]?.id ?? ""]: 1 }}
+          onClose={() => setOverlay(null)}
+          onOpen={(p) => setOverlay({ kind: "chat", patient: p })}
+        />
+      )}
       <ActionSheet
         open={!!actionPatient}
         title={actionPatient ? `${actionPatient.name}${actionPatient.bedNo ? ` · ${actionPatient.bedNo}床` : " · 门诊"}` : ""}
