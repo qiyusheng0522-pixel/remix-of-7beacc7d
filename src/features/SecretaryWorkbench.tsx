@@ -104,8 +104,7 @@ export function SecretaryWorkbench() {
             else if (key === "ocr") showToast("OCR 识别：化验单 / 入院单 / 电子病历");
             else if (key === "followup") setTab("followup");
             else if (key === "chat") {
-              const target = inpatientPatients[0] ?? pendingAdmission[0];
-              if (target) setOverlay({ kind: "chat", patient: target });
+              setOverlay({ kind: "chat-list" });
             } else if (key === "vitals") {
               if (inpatientPatients.length > 0) setTab("inpatient");
             }
