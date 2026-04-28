@@ -38,7 +38,7 @@ export function SurgicalTeamWorkbench() {
   const [reasonFor, setReasonFor] = useState<{ patient: Patient; decision: "hold" | "return" } | null>(null);
   const [intraOpFor, setIntraOpFor] = useState<Patient | null>(null);
   const [chatPatient, setChatPatient] = useState<Patient | null>(null);
-  const [toast2, _setToast2] = useState<string | null>(null); void toast2; void _setToast2;
+  const [showPatientList, setShowPatientList] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const tomorrowSurgery = patients.filter((p) => p.status === "admitted" && p.preOpFindings);
