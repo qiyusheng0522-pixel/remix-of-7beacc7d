@@ -111,6 +111,7 @@ export function TherapistWorkbench() {
           planPendingCount={myPatients.filter((p) => planStatuses[p.id] === "ai-draft").length}
           chatPendingCount={3}
           onOpenPatients={() => setOverlay({ kind: "patient-list" })}
+          onOpenChat={() => setOverlay({ kind: "chat-list" })}
           onOpenPlans={() => setTab("plans")}
           onOpenRecords={() => setTab("records")}
         />
