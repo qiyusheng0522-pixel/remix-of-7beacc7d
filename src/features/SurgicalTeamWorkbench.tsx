@@ -777,47 +777,4 @@ function FilterRow({
   );
 }
 
-/* ---------- 患者沟通列表（同治疗师端） ---------- */
-function ChatListTab({ list, onOpen, onOpenAll }: { list: Patient[]; onOpen: (p: Patient) => void; onOpenAll: () => void }) {
-  return (
-    <div className="space-y-3 p-3">
-      <div className="rounded-2xl border bg-info/5 p-2.5 text-[11px] text-info">
-        <MessageCircle className="mr-1 inline h-3 w-3" />
-        与负责患者直接沟通，AI 已准备草稿，确认后即可发送。
-      </div>
-      <div className="flex items-center justify-between px-1">
-        <div className="text-xs font-semibold">我的患者 · {list.length}</div>
-        <button onClick={onOpenAll} className="rounded-full bg-primary/10 px-2 py-1 text-[10px] text-primary">
-          全部患者
-        </button>
-      </div>
-      {list.map((p) => (
-        <button
-          key={p.id}
-          onClick={() => onOpen(p)}
-          className="w-full rounded-2xl border bg-card p-3 text-left active:bg-muted/30"
-        >
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-[12px] font-bold text-primary">
-              {p.name.slice(0, 1)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1 text-[12px] font-semibold">
-                {p.name}
-                {p.bedNo && <span className="text-[10px] text-muted-foreground">· {p.bedNo}床</span>}
-                {p.side && (
-                  <span className="rounded bg-warning/20 px-1 py-0.5 text-[9px] font-bold text-warning-foreground">
-                    患侧 {p.side}
-                  </span>
-                )}
-              </div>
-              <div className="truncate text-[10px] text-muted-foreground">{p.surgeryName ?? p.diagnosis}</div>
-            </div>
-            <MessageCircle className="h-4 w-4 text-info" />
-          </div>
-        </button>
-      ))}
-    </div>
-  );
-}
 
