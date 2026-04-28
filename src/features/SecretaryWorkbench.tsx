@@ -37,6 +37,7 @@ import { cn } from "@/lib/utils";
 type TabKey = "home" | "outpatient" | "inpatient" | "followup" | "me";
 type Overlay =
   | { kind: "chat"; patient: Patient }
+  | { kind: "chat-list" }
   | { kind: "archive"; patient: Patient }
   | { kind: "vitals"; patient: Patient }
   | { kind: "handover" }
