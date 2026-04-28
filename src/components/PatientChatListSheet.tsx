@@ -46,22 +46,9 @@ export function PatientChatListSheet({
     );
   });
 
-  return (
-    <div className="absolute inset-0 z-50 flex flex-col bg-background">
-      {/* 顶部 */}
-      <div className="flex items-center gap-2 border-b bg-card px-3 py-2.5">
-        <button onClick={onClose}>
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-semibold">{title}</div>
-          {subtitle && (
-            <div className="truncate text-[10px] text-muted-foreground">{subtitle}</div>
-          )}
-        </div>
-      </div>
-
-      <div className="flex-1 space-y-3 overflow-y-auto p-3">
+  const body = (
+    <>
+      <div className="space-y-3 p-3">
         {/* 概览卡片（护士端风格） */}
         <div
           className="flex w-full items-center gap-2.5 rounded-2xl border bg-card p-3 text-left"
