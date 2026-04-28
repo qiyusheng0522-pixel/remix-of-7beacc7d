@@ -231,6 +231,7 @@ function HomeTab({
   planPendingCount,
   chatPendingCount,
   onOpenPatients,
+  onOpenChat,
   onOpenPlans,
   onOpenRecords,
 }: {
@@ -240,6 +241,7 @@ function HomeTab({
   planPendingCount: number;
   chatPendingCount: number;
   onOpenPatients: () => void;
+  onOpenChat: () => void;
   onOpenPlans: () => void;
   onOpenRecords: () => void;
 }) {
