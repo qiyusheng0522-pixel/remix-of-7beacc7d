@@ -142,6 +142,19 @@ export function SecretaryWorkbench() {
       {overlay?.kind === "chat" && (
         <PatientChatSheet patient={overlay.patient} onClose={() => setOverlay(null)} selfRole="护士" />
       )}
+      {overlay?.kind === "chat-list" && (
+        <PatientChatListSheet
+          subtitle="未处理消息 · AI 已起草"
+          patients={[...inpatientPatients, ...pendingAdmission]}
+          unread={{
+            [inpatientPatients[0]?.id ?? ""]: 2,
+            [inpatientPatients[1]?.id ?? ""]: 2,
+            [pendingAdmission[0]?.id ?? ""]: 1,
+          }}
+          onClose={() => setOverlay(null)}
+          onOpen={(p) => setOverlay({ kind: "chat", patient: p })}
+        />
+      )}
       {overlay?.kind === "archive" && (
         <PatientArchiveSheet patient={overlay.patient} onClose={() => setOverlay(null)} selfRole="护士" selfName="张护士长" />
       )}
