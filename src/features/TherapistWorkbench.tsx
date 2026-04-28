@@ -292,7 +292,7 @@ function HomeTab({
           value={chatPendingCount}
           badge={chatPendingCount > 0}
           tone="bg-success/15 text-success"
-          onClick={onOpenPatients}
+          onClick={onOpenChat}
         />
         <StatEntry
           icon={Sparkles}
