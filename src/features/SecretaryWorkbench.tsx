@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { PatientChatSheet } from "@/components/PatientChatSheet";
+import { PatientChatListSheet } from "@/components/PatientChatListSheet";
 import { PatientArchiveSheet } from "@/components/PatientArchiveSheet";
 import { ActionSheet, ToastBanner } from "@/components/ActionSheet";
 import { HandoverSheet } from "@/components/HandoverSheet";
@@ -36,6 +37,7 @@ import { cn } from "@/lib/utils";
 type TabKey = "home" | "outpatient" | "inpatient" | "followup" | "me";
 type Overlay =
   | { kind: "chat"; patient: Patient }
+  | { kind: "chat-list" }
   | { kind: "archive"; patient: Patient }
   | { kind: "vitals"; patient: Patient }
   | { kind: "handover" }
@@ -102,8 +104,7 @@ export function SecretaryWorkbench() {
             else if (key === "ocr") showToast("OCR 识别：化验单 / 入院单 / 电子病历");
             else if (key === "followup") setTab("followup");
             else if (key === "chat") {
-              const target = inpatientPatients[0] ?? pendingAdmission[0];
-              if (target) setOverlay({ kind: "chat", patient: target });
+              setOverlay({ kind: "chat-list" });
             } else if (key === "vitals") {
               if (inpatientPatients.length > 0) setTab("inpatient");
             }
@@ -140,6 +141,19 @@ export function SecretaryWorkbench() {
 
       {overlay?.kind === "chat" && (
         <PatientChatSheet patient={overlay.patient} onClose={() => setOverlay(null)} selfRole="护士" />
+      )}
+      {overlay?.kind === "chat-list" && (
+        <PatientChatListSheet
+          subtitle="未处理消息 · AI 已起草"
+          patients={[...inpatientPatients, ...pendingAdmission]}
+          unread={{
+            [inpatientPatients[0]?.id ?? ""]: 2,
+            [inpatientPatients[1]?.id ?? ""]: 2,
+            [pendingAdmission[0]?.id ?? ""]: 1,
+          }}
+          onClose={() => setOverlay(null)}
+          onOpen={(p) => setOverlay({ kind: "chat", patient: p })}
+        />
       )}
       {overlay?.kind === "archive" && (
         <PatientArchiveSheet patient={overlay.patient} onClose={() => setOverlay(null)} selfRole="护士" selfName="张护士长" />

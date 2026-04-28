@@ -25,6 +25,7 @@ import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { Card, MiniStat, QuickAction } from "./SecretaryWorkbench";
 import { BarChart, ChartCard, HBarRow, LineChart, StatTile } from "@/components/WorkStats";
 import { PatientChatSheet } from "@/components/PatientChatSheet";
+import { PatientChatListSheet } from "@/components/PatientChatListSheet";
 import { PatientArchiveSheet } from "@/components/PatientArchiveSheet";
 import { PatientListSheet } from "@/components/PatientListSheet";
 import { RehabRecordSheet } from "@/components/RehabRecordSheet";
@@ -36,6 +37,7 @@ import { cn } from "@/lib/utils";
 type TabKey = "home" | "plans" | "records" | "me";
 type Overlay =
   | { kind: "chat"; patient: Patient }
+  | { kind: "chat-list" }
   | { kind: "archive"; patient: Patient }
   | { kind: "patient-list" }
   | { kind: "discharge"; patient: Patient }
@@ -109,6 +111,7 @@ export function TherapistWorkbench() {
           planPendingCount={myPatients.filter((p) => planStatuses[p.id] === "ai-draft").length}
           chatPendingCount={3}
           onOpenPatients={() => setOverlay({ kind: "patient-list" })}
+          onOpenChat={() => setOverlay({ kind: "chat-list" })}
           onOpenPlans={() => setTab("plans")}
           onOpenRecords={() => setTab("records")}
         />
@@ -198,6 +201,15 @@ export function TherapistWorkbench() {
           onChat={(p) => setOverlay({ kind: "chat", patient: p })}
         />
       )}
+      {overlay?.kind === "chat-list" && (
+        <PatientChatListSheet
+          subtitle="与负责患者直接沟通"
+          patients={myPatients}
+          unread={{ [myPatients[0]?.id ?? ""]: 2, [myPatients[1]?.id ?? ""]: 1 }}
+          onClose={() => setOverlay(null)}
+          onOpen={(p) => setOverlay({ kind: "chat", patient: p })}
+        />
+      )}
       <ActionSheet
         open={!!actionPatient}
         title={actionPatient ? `${actionPatient.name}${actionPatient.bedNo ? ` · ${actionPatient.bedNo}床` : " · 门诊"}` : ""}
@@ -229,6 +241,7 @@ function HomeTab({
   planPendingCount,
   chatPendingCount,
   onOpenPatients,
+  onOpenChat,
   onOpenPlans,
   onOpenRecords,
 }: {
@@ -238,6 +251,7 @@ function HomeTab({
   planPendingCount: number;
   chatPendingCount: number;
   onOpenPatients: () => void;
+  onOpenChat: () => void;
   onOpenPlans: () => void;
   onOpenRecords: () => void;
 }) {
@@ -287,7 +301,7 @@ function HomeTab({
           value={chatPendingCount}
           badge={chatPendingCount > 0}
           tone="bg-success/15 text-success"
-          onClick={onOpenPatients}
+          onClick={onOpenChat}
         />
         <StatEntry
           icon={Sparkles}
