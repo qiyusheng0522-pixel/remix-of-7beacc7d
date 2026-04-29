@@ -2,6 +2,45 @@ import { useMemo, useState } from "react";
 import { ArrowLeft, MessageCircle, Search, ChevronRight, Sparkles } from "lucide-react";
 import type { Patient } from "@/lib/types";
 
+/** 与护士端一致的"患者沟通"入口卡片（横向，绿色图标 + 未读徽章） */
+export function PatientChatEntryCard({
+  unreadCount,
+  patientCount,
+  onClick,
+}: {
+  unreadCount: number;
+  patientCount: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex w-full items-center gap-2.5 rounded-2xl border bg-card p-3 text-left active:bg-muted/30"
+      style={{ boxShadow: "var(--shadow-card)" }}
+    >
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-success/15 text-success">
+        <MessageCircle className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[12px] font-semibold">患者沟通</span>
+          {unreadCount > 0 && (
+            <span className="rounded-full bg-destructive px-1.5 py-0.5 text-[9px] font-bold text-destructive-foreground">
+              {unreadCount}
+            </span>
+          )}
+        </div>
+        <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
+          {unreadCount > 0
+            ? `${unreadCount} 条未处理消息 · 涉及 ${patientCount} 位患者`
+            : "暂无未处理消息"}
+        </div>
+      </div>
+      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+    </button>
+  );
+}
+
 interface ChatListProps {
   patients: Patient[];
   /** 各患者未读数（id -> 数字） */

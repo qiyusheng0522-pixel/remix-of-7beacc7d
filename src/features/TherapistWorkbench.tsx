@@ -25,7 +25,7 @@ import { PhoneShell, TabBar } from "@/components/PhoneShell";
 import { Card, MiniStat, QuickAction } from "./SecretaryWorkbench";
 import { BarChart, ChartCard, HBarRow, LineChart, StatTile } from "@/components/WorkStats";
 import { PatientChatSheet } from "@/components/PatientChatSheet";
-import { PatientChatListSheet } from "@/components/PatientChatListSheet";
+import { PatientChatListSheet, PatientChatEntryCard } from "@/components/PatientChatListSheet";
 import { PatientArchiveSheet } from "@/components/PatientArchiveSheet";
 import { PatientListSheet } from "@/components/PatientListSheet";
 import { RehabRecordSheet } from "@/components/RehabRecordSheet";
@@ -295,15 +295,6 @@ function HomeTab({
           onClick={onOpenRecords}
         />
         <StatEntry
-          icon={MessageCircle}
-          label="患者沟通"
-          sub={chatPendingCount > 0 ? `${chatPendingCount} 条未回复` : "无待回复"}
-          value={chatPendingCount}
-          badge={chatPendingCount > 0}
-          tone="bg-success/15 text-success"
-          onClick={onOpenChat}
-        />
-        <StatEntry
           icon={Sparkles}
           label="今日待办"
           sub={`${tasks.length} 项任务`}
@@ -312,6 +303,12 @@ function HomeTab({
           onClick={onOpenRecords}
         />
       </div>
+
+      <PatientChatEntryCard
+        unreadCount={chatPendingCount}
+        patientCount={Math.min(chatPendingCount, 3)}
+        onClick={onOpenChat}
+      />
 
       <Card title="今日待办" rightLabel={`${tasks.length} 项`}>
         <div className="divide-y">

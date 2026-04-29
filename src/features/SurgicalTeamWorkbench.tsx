@@ -23,7 +23,7 @@ import { Card } from "./SecretaryWorkbench";
 import { BarChart, ChartCard, DonutChart, StatTile } from "@/components/WorkStats";
 import { ToastBanner } from "@/components/ActionSheet";
 import { PatientChatSheet } from "@/components/PatientChatSheet";
-import { PatientChatListView } from "@/components/PatientChatListSheet";
+import { PatientChatListView, PatientChatEntryCard } from "@/components/PatientChatListSheet";
 import { PatientListSheet } from "@/components/PatientListSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
@@ -197,15 +197,6 @@ function HomeTab({
           onClick={() => onJump("intraop")}
         />
         <WorkStatCard
-          icon={MessageCircle}
-          label="患者沟通"
-          value={chatPending}
-          sub={chatPending > 0 ? `${chatPending} 条未回复` : "暂无待回复"}
-          badge={chatPending}
-          tone="bg-info/10 text-info"
-          onClick={() => onJump("chat")}
-        />
-        <WorkStatCard
           icon={ClipboardEdit}
           label="今日待办"
           value={tasks.length}
@@ -214,6 +205,12 @@ function HomeTab({
           onClick={() => onJump("preop")}
         />
       </div>
+
+      <PatientChatEntryCard
+        unreadCount={chatPending}
+        patientCount={Math.min(chatPending, 3)}
+        onClick={() => onJump("chat")}
+      />
 
       <Card title="今日待办" rightLabel={`${tasks.length} 项`}>
         <div className="divide-y">
