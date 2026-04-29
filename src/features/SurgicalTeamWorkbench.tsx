@@ -212,12 +212,6 @@ function HomeTab({
         onClick={() => onJump("chat")}
       />
 
-      <PatientChatEntryCard
-        unreadCount={chatPending}
-        patientCount={Math.min(chatPending, 3)}
-        onClick={() => onJump("chat")}
-      />
-
       <Card title="今日待办" rightLabel={`${tasks.length} 项`}>
         <div className="divide-y">
           {tasks.map((t) => (
