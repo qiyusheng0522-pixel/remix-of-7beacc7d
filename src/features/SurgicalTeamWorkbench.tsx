@@ -197,6 +197,14 @@ function HomeTab({
           onClick={() => onJump("intraop")}
         />
         <WorkStatCard
+          icon={ClipboardEdit}
+          label="今日待办"
+          value={tasks.length}
+          sub={`${tasks.length} 项任务`}
+          tone="bg-muted text-foreground"
+          onClick={() => onJump("preop")}
+        />
+        <WorkStatCard
           icon={MessageCircle}
           label="患者沟通"
           value={chatPending}
@@ -205,15 +213,13 @@ function HomeTab({
           tone="bg-info/10 text-info"
           onClick={() => onJump("chat")}
         />
-        <WorkStatCard
-          icon={ClipboardEdit}
-          label="今日待办"
-          value={tasks.length}
-          sub={`${tasks.length} 项任务`}
-          tone="bg-muted text-foreground"
-          onClick={() => onJump("preop")}
-        />
       </div>
+
+      <PatientChatEntryCard
+        unreadCount={chatPending}
+        patientCount={Math.min(chatPending, 3)}
+        onClick={() => onJump("chat")}
+      />
 
       <Card title="今日待办" rightLabel={`${tasks.length} 项`}>
         <div className="divide-y">
