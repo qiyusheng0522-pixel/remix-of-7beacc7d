@@ -204,16 +204,13 @@ function HomeTab({
           tone="bg-muted text-foreground"
           onClick={() => onJump("preop")}
         />
-        <WorkStatCard
-          icon={MessageCircle}
-          label="患者沟通"
-          value={chatPending}
-          sub={chatPending > 0 ? `${chatPending} 条未回复` : "暂无待回复"}
-          badge={chatPending}
-          tone="bg-info/10 text-info"
-          onClick={() => onJump("chat")}
-        />
       </div>
+
+      <PatientChatEntryCard
+        unreadCount={chatPending}
+        patientCount={Math.min(chatPending, 3)}
+        onClick={() => onJump("chat")}
+      />
 
       <PatientChatEntryCard
         unreadCount={chatPending}
