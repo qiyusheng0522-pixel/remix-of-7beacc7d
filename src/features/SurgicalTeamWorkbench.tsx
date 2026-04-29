@@ -23,7 +23,7 @@ import { Card } from "./SecretaryWorkbench";
 import { BarChart, ChartCard, DonutChart, StatTile } from "@/components/WorkStats";
 import { ToastBanner } from "@/components/ActionSheet";
 import { PatientChatSheet } from "@/components/PatientChatSheet";
-import { PatientChatListView } from "@/components/PatientChatListSheet";
+import { PatientChatListView, PatientChatEntryCard } from "@/components/PatientChatListSheet";
 import { PatientListSheet } from "@/components/PatientListSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
