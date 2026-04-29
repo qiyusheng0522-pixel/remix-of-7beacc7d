@@ -196,14 +196,6 @@ function HomeTab({
           tone="bg-warning/15 text-warning-foreground"
           onClick={() => onJump("intraop")}
         />
-        <WorkStatCard
-          icon={ClipboardEdit}
-          label="今日待办"
-          value={tasks.length}
-          sub={`${tasks.length} 项任务`}
-          tone="bg-muted text-foreground"
-          onClick={() => onJump("preop")}
-        />
       </div>
 
       <PatientChatEntryCard
