@@ -1,21 +1,23 @@
 import { createFileRoute, Navigate, Link } from "@tanstack/react-router";
-import { Stethoscope, ClipboardCheck, Users, Activity, Home, ChevronLeft } from "lucide-react";
+import { Stethoscope, ClipboardCheck, Users, Activity, Home, ChevronLeft , HeartPulse } from "lucide-react";
 import type { Role } from "@/lib/types";
 import { SecretaryWorkbench } from "@/features/SecretaryWorkbench";
 import { DoctorOnDutyWorkbench } from "@/features/DoctorOnDutyWorkbench";
 import { SurgicalTeamWorkbench } from "@/features/SurgicalTeamWorkbench";
 import { TherapistWorkbench } from "@/features/TherapistWorkbench";
+import { PatientApp } from "@/features/PatientApp";
 import { roleMeta } from "@/lib/mock-data";
 import { PhoneShell } from "@/components/PhoneShell";
 import { cn } from "@/lib/utils";
 
-const VALID: Role[] = ["secretary", "doctor-on-duty", "surgical-team", "therapist"];
+const VALID: Role[] = ["secretary", "doctor-on-duty", "surgical-team", "therapist", "patient"];
 
 const roleIcons = {
   secretary: Stethoscope,
   "doctor-on-duty": ClipboardCheck,
   "surgical-team": Users,
   therapist: Activity,
+  patient: HeartPulse,
 } as const;
 
 export const Route = createFileRoute("/role/$role")({
@@ -117,6 +119,7 @@ function RolePage() {
           {role === "doctor-on-duty" && <DoctorOnDutyWorkbench />}
           {role === "surgical-team" && <SurgicalTeamWorkbench />}
           {role === "therapist" && <TherapistWorkbench />}
+          {role === "patient" && <PatientApp />}
         </main>
 
         {/* 右侧：角色简介 */}

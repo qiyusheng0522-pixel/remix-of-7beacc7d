@@ -1,5 +1,5 @@
 import { Link, useParams } from "@tanstack/react-router";
-import { Stethoscope, ClipboardCheck, Users, Activity, Home, Search } from "lucide-react";
+import { Stethoscope, ClipboardCheck, Users, Activity, Home, Search , HeartPulse } from "lucide-react";
 import { roleMeta } from "@/lib/mock-data";
 import type { Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -11,9 +11,10 @@ const roleIcons = {
   "doctor-on-duty": ClipboardCheck,
   "surgical-team": Users,
   therapist: Activity,
+  patient: HeartPulse,
 } as const;
 
-const roles: Role[] = ["secretary", "doctor-on-duty", "surgical-team", "therapist"];
+const roles: Role[] = ["secretary", "doctor-on-duty", "surgical-team", "therapist", "patient"];
 
 export function RoleSwitcher({ activeRole }: { activeRole: Role }) {
   return (

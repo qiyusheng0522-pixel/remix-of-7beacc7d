@@ -1,4 +1,4 @@
-export type Role = "secretary" | "doctor-on-duty" | "surgical-team" | "therapist";
+export type Role = "secretary" | "doctor-on-duty" | "surgical-team" | "therapist" | "patient";
 
 export type Department = "inpatient" | "outpatient";
 

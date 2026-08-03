@@ -315,4 +315,10 @@ export const roleMeta = {
     description: "AI 康复方案确认、康复评估、院内康复治疗记录。",
     accent: "from-emerald-500 to-teal-600",
   },
+  patient: {
+    title: "患者端",
+    subtitle: "Patient",
+    description: "门诊待入院/保守治疗待办、住院康复每日任务打卡、服务包与科普、出院评估。",
+    accent: "from-orange-500 to-amber-600",
+  },
 } as const;
