@@ -1,5 +1,5 @@
 import { createFileRoute, Navigate, Link } from "@tanstack/react-router";
-import { Stethoscope, ClipboardCheck, Users, Activity, Home, ChevronLeft } from "lucide-react";
+import { Stethoscope, ClipboardCheck, Users, Activity, Home, ChevronLeft , HeartPulse } from "lucide-react";
 import type { Role } from "@/lib/types";
 import { SecretaryWorkbench } from "@/features/SecretaryWorkbench";
 import { DoctorOnDutyWorkbench } from "@/features/DoctorOnDutyWorkbench";

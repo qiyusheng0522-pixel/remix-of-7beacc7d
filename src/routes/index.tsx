@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Stethoscope, ClipboardCheck, Users, Activity, ChevronRight, Smartphone, Workflow } from "lucide-react";
+import { Stethoscope, ClipboardCheck, Users, Activity, ChevronRight, Smartphone, Workflow , HeartPulse } from "lucide-react";
 import { roleMeta } from "@/lib/mock-data";
 import type { Role } from "@/lib/types";
 
