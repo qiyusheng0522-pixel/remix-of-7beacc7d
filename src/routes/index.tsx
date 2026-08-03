@@ -7,7 +7,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "骨安 BoneCare 小程序 — 角色入口" },
-      { name: "description", content: "骨安骨科诊疗小程序 · 4 个角色端 · 门诊与住院全周期管理" },
+      { name: "description", content: "骨安骨科诊疗小程序 · 5 个角色端 · 门诊与住院全周期管理" },
     ],
   }),
   component: HomePage,
@@ -63,11 +63,11 @@ function HomePage() {
           <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             骨安 ·{" "}
             <span className="bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-              四端协同小程序
+              五端协同小程序
             </span>
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-xs text-muted-foreground sm:text-sm">
-            护士 / 值班医生 / 手术团队 / 治疗师 —— 每个角色都有独立的小程序入口，串联门诊与住院全流程。
+            护士 / 值班医生 / 手术团队 / 治疗师 / 患者 —— 每个角色都有独立的小程序入口，串联门诊与住院全流程。
           </p>
         </div>
 
