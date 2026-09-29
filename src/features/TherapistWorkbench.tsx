@@ -202,6 +202,20 @@ export function TherapistWorkbench() {
       )}
       {tab === "me" && <MeTab />}
 
+      {planPicker && (
+        <PlanPickerSheet
+          patient={planPicker}
+          current={planChoices[planPicker.id] ?? "ai-standard"}
+          onClose={() => setPlanPicker(null)}
+          onSelect={(key) => {
+            const t = PLAN_TEMPLATES.find((x) => x.key === key)!;
+            setPlanChoices((c) => ({ ...c, [planPicker.id]: key }));
+            setPlanStatuses((s) => ({ ...s, [planPicker.id]: "ai-draft" }));
+            setPlanPicker(null);
+            showToast(`已切换为「${t.name}」：${planPicker.name}`);
+          }}
+        />
+      )}
       {planEditor && (
         <PlanEditorSheet
           patient={planEditor}
