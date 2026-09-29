@@ -175,6 +175,8 @@ export function TherapistWorkbench() {
         <PlansTab
           list={myPatients}
           statuses={planStatuses}
+          choices={planChoices}
+          onPickPlan={(p) => setPlanPicker(p)}
           onEdit={(p) => setPlanEditor(p)}
           onConfirm={(p) => {
             setPlanStatuses((s) => ({ ...s, [p.id]: "confirmed" }));
