@@ -463,7 +463,9 @@ function PlansTab({
 
       {list.map((p) => {
         const status = statuses[p.id] ?? "ai-draft";
-        const plan = aiRehabPlan(p);
+        const planKey = choices[p.id] ?? "ai-standard";
+        const template = PLAN_TEMPLATES.find((t) => t.key === planKey) ?? PLAN_TEMPLATES[0];
+        const plan = aiRehabPlan(p, planKey);
         return (
           <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
             <div className="flex items-start justify-between gap-2 border-b p-3">
