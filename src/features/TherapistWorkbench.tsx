@@ -43,18 +43,71 @@ type Overlay =
   | { kind: "discharge"; patient: Patient }
   | null;
 
-// AI 生成的康复方案（模拟）
-const aiRehabPlan = (patient: Patient) => ({
-  goal: `${patient.surgeryName ?? "术后"} · 7 日内屈膝 ≥90°，独立扶助行器行走 50m`,
-  items: [
-    "术后第 1 日：踝泵 30 次/h，SLR 直腿抬高 3 组×10 次",
-    "术后第 2 日：被动屈膝 0-60°，CPM 机辅助",
-    "术后第 3 日：床旁站立 5 min，扶助行器行走 5m",
-    "术后第 5 日：屈膝 ≥75°，扶助行器行走 30m",
-    "术后第 7 日：屈膝 ≥90°，独立行走 50m，可上下楼梯",
-  ],
-  precautions: ["避免患肢负重 >50%", "如出现 38℃ 以上发热立即上报", "夜间睡眠保持患肢中立位"],
-});
+// 康复方案模板库：默认 AI 方案 + 可手动切换的备选方案
+interface PlanTemplate {
+  key: string;
+  name: string;
+  desc: string;
+  tag: string;
+}
+
+const PLAN_TEMPLATES: PlanTemplate[] = [
+  { key: "ai-standard", name: "AI 标准方案", desc: "默认推荐 · 依据术中量表与医生建议生成", tag: "默认" },
+  { key: "accelerated", name: "加速康复方案", desc: "进度更快，适合年轻、肌力基础好的患者", tag: "激进" },
+  { key: "conservative", name: "保守渐进方案", desc: "进度放缓，适合疼痛明显或骨质疏松患者", tag: "保守" },
+  { key: "home-based", name: "居家主导方案", desc: "以居家训练为主，每周 2 次门诊复查", tag: "居家" },
+];
+
+const aiRehabPlan = (patient: Patient, templateKey = "ai-standard") => {
+  const base = {
+    goal: `${patient.surgeryName ?? "术后"} · 7 日内屈膝 ≥90°，独立扶助行器行走 50m`,
+    items: [
+      "术后第 1 日：踝泵 30 次/h，SLR 直腿抬高 3 组×10 次",
+      "术后第 2 日：被动屈膝 0-60°，CPM 机辅助",
+      "术后第 3 日：床旁站立 5 min，扶助行器行走 5m",
+      "术后第 5 日：屈膝 ≥75°，扶助行器行走 30m",
+      "术后第 7 日：屈膝 ≥90°，独立行走 50m，可上下楼梯",
+    ],
+    precautions: ["避免患肢负重 >50%", "如出现 38℃ 以上发热立即上报", "夜间睡眠保持患肢中立位"],
+  };
+  if (templateKey === "accelerated")
+    return {
+      goal: `${patient.surgeryName ?? "术后"} · 5 日内屈膝 ≥90°，独立行走 80m`,
+      items: [
+        "术后第 1 日：踝泵 50 次/h，SLR 直腿抬高 5 组×15 次，主动屈膝 0-45°",
+        "术后第 2 日：被动屈膝 0-75°，CPM 机辅助 2h，床旁站立 5 min",
+        "术后第 3 日：屈膝 ≥85°，扶助行器行走 30m，静蹲靠墙 3 组",
+        "术后第 4 日：屈膝 ≥90°，独立行走 50m，尝试上下台阶",
+        "术后第 5 日：独立行走 80m，上下楼梯，达标可启动出院评估",
+      ],
+      precautions: ["密切观察肿胀，冰敷 3 次/日", "疼痛 VAS ≥7 立即降级方案", "每日复查伤口"],
+    };
+  if (templateKey === "conservative")
+    return {
+      goal: `${patient.surgeryName ?? "术后"} · 10 日内屈膝 ≥90°，扶助行器行走 30m`,
+      items: [
+        "术后第 1-2 日：踝泵 20 次/h，股四头肌等长收缩 3 组×10 次",
+        "术后第 3 日：被动屈膝 0-45°，CPM 机辅助 1h",
+        "术后第 5 日：屈膝 ≥60°，床旁坐起，暂不负重站立",
+        "术后第 7 日：屈膝 ≥75°，扶助行器站立 3 min",
+        "术后第 10 日：屈膝 ≥90°，扶助行器行走 30m",
+      ],
+      precautions: ["全程不负重或部分负重", "肿胀加重即暂停进阶", "睡眠抬高患肢"],
+    };
+  if (templateKey === "home-based")
+    return {
+      goal: `${patient.surgeryName ?? "术后"} · 居家训练 2 周，门诊复查 2 次/周`,
+      items: [
+        "每日：踝泵 30 次/h，SLR 直腿抬高 3 组×10 次（视频跟练）",
+        "每日：被动屈膝至可耐受角度，记录角度打卡",
+        "隔日：扶助行器室内行走 10-20m",
+        "每周一/四：门诊复查，调整下一阶段动作",
+        "第 14 日：门诊评估屈膝 ≥90°，达标转巩固期",
+      ],
+      precautions: ["居家训练需家属陪同", "每日 App 打卡上传角度照片", "异常疼痛/发热立即门诊就诊"],
+    };
+  return base;
+};
 
 type PlanStatus = "ai-draft" | "confirmed" | "edited" | "empty";
 
