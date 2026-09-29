@@ -43,18 +43,71 @@ type Overlay =
   | { kind: "discharge"; patient: Patient }
   | null;
 
-// AI 生成的康复方案（模拟）
-const aiRehabPlan = (patient: Patient) => ({
-  goal: `${patient.surgeryName ?? "术后"} · 7 日内屈膝 ≥90°，独立扶助行器行走 50m`,
-  items: [
-    "术后第 1 日：踝泵 30 次/h，SLR 直腿抬高 3 组×10 次",
-    "术后第 2 日：被动屈膝 0-60°，CPM 机辅助",
-    "术后第 3 日：床旁站立 5 min，扶助行器行走 5m",
-    "术后第 5 日：屈膝 ≥75°，扶助行器行走 30m",
-    "术后第 7 日：屈膝 ≥90°，独立行走 50m，可上下楼梯",
-  ],
-  precautions: ["避免患肢负重 >50%", "如出现 38℃ 以上发热立即上报", "夜间睡眠保持患肢中立位"],
-});
+// 康复方案模板库：默认 AI 方案 + 可手动切换的备选方案
+interface PlanTemplate {
+  key: string;
+  name: string;
+  desc: string;
+  tag: string;
+}
+
+const PLAN_TEMPLATES: PlanTemplate[] = [
+  { key: "ai-standard", name: "AI 标准方案", desc: "默认推荐 · 依据术中量表与医生建议生成", tag: "默认" },
+  { key: "accelerated", name: "加速康复方案", desc: "进度更快，适合年轻、肌力基础好的患者", tag: "激进" },
+  { key: "conservative", name: "保守渐进方案", desc: "进度放缓，适合疼痛明显或骨质疏松患者", tag: "保守" },
+  { key: "home-based", name: "居家主导方案", desc: "以居家训练为主，每周 2 次门诊复查", tag: "居家" },
+];
+
+const aiRehabPlan = (patient: Patient, templateKey = "ai-standard") => {
+  const base = {
+    goal: `${patient.surgeryName ?? "术后"} · 7 日内屈膝 ≥90°，独立扶助行器行走 50m`,
+    items: [
+      "术后第 1 日：踝泵 30 次/h，SLR 直腿抬高 3 组×10 次",
+      "术后第 2 日：被动屈膝 0-60°，CPM 机辅助",
+      "术后第 3 日：床旁站立 5 min，扶助行器行走 5m",
+      "术后第 5 日：屈膝 ≥75°，扶助行器行走 30m",
+      "术后第 7 日：屈膝 ≥90°，独立行走 50m，可上下楼梯",
+    ],
+    precautions: ["避免患肢负重 >50%", "如出现 38℃ 以上发热立即上报", "夜间睡眠保持患肢中立位"],
+  };
+  if (templateKey === "accelerated")
+    return {
+      goal: `${patient.surgeryName ?? "术后"} · 5 日内屈膝 ≥90°，独立行走 80m`,
+      items: [
+        "术后第 1 日：踝泵 50 次/h，SLR 直腿抬高 5 组×15 次，主动屈膝 0-45°",
+        "术后第 2 日：被动屈膝 0-75°，CPM 机辅助 2h，床旁站立 5 min",
+        "术后第 3 日：屈膝 ≥85°，扶助行器行走 30m，静蹲靠墙 3 组",
+        "术后第 4 日：屈膝 ≥90°，独立行走 50m，尝试上下台阶",
+        "术后第 5 日：独立行走 80m，上下楼梯，达标可启动出院评估",
+      ],
+      precautions: ["密切观察肿胀，冰敷 3 次/日", "疼痛 VAS ≥7 立即降级方案", "每日复查伤口"],
+    };
+  if (templateKey === "conservative")
+    return {
+      goal: `${patient.surgeryName ?? "术后"} · 10 日内屈膝 ≥90°，扶助行器行走 30m`,
+      items: [
+        "术后第 1-2 日：踝泵 20 次/h，股四头肌等长收缩 3 组×10 次",
+        "术后第 3 日：被动屈膝 0-45°，CPM 机辅助 1h",
+        "术后第 5 日：屈膝 ≥60°，床旁坐起，暂不负重站立",
+        "术后第 7 日：屈膝 ≥75°，扶助行器站立 3 min",
+        "术后第 10 日：屈膝 ≥90°，扶助行器行走 30m",
+      ],
+      precautions: ["全程不负重或部分负重", "肿胀加重即暂停进阶", "睡眠抬高患肢"],
+    };
+  if (templateKey === "home-based")
+    return {
+      goal: `${patient.surgeryName ?? "术后"} · 居家训练 2 周，门诊复查 2 次/周`,
+      items: [
+        "每日：踝泵 30 次/h，SLR 直腿抬高 3 组×10 次（视频跟练）",
+        "每日：被动屈膝至可耐受角度，记录角度打卡",
+        "隔日：扶助行器室内行走 10-20m",
+        "每周一/四：门诊复查，调整下一阶段动作",
+        "第 14 日：门诊评估屈膝 ≥90°，达标转巩固期",
+      ],
+      precautions: ["居家训练需家属陪同", "每日 App 打卡上传角度照片", "异常疼痛/发热立即门诊就诊"],
+    };
+  return base;
+};
 
 type PlanStatus = "ai-draft" | "confirmed" | "edited" | "empty";
 
@@ -69,6 +122,8 @@ export function TherapistWorkbench() {
     p8: "confirmed",
     p9: "edited",
   });
+  const [planChoices, setPlanChoices] = useState<Record<string, string>>({});
+  const [planPicker, setPlanPicker] = useState<Patient | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   // 住院 + 门诊康复患者
@@ -120,6 +175,8 @@ export function TherapistWorkbench() {
         <PlansTab
           list={myPatients}
           statuses={planStatuses}
+          choices={planChoices}
+          onPickPlan={(p) => setPlanPicker(p)}
           onEdit={(p) => setPlanEditor(p)}
           onConfirm={(p) => {
             setPlanStatuses((s) => ({ ...s, [p.id]: "confirmed" }));
@@ -145,6 +202,20 @@ export function TherapistWorkbench() {
       )}
       {tab === "me" && <MeTab />}
 
+      {planPicker && (
+        <PlanPickerSheet
+          patient={planPicker}
+          current={planChoices[planPicker.id] ?? "ai-standard"}
+          onClose={() => setPlanPicker(null)}
+          onSelect={(key) => {
+            const t = PLAN_TEMPLATES.find((x) => x.key === key)!;
+            setPlanChoices((c) => ({ ...c, [planPicker.id]: key }));
+            setPlanStatuses((s) => ({ ...s, [planPicker.id]: "ai-draft" }));
+            setPlanPicker(null);
+            showToast(`已切换为「${t.name}」：${planPicker.name}`);
+          }}
+        />
+      )}
       {planEditor && (
         <PlanEditorSheet
           patient={planEditor}
@@ -381,6 +452,8 @@ function StatEntry({
 function PlansTab({
   list,
   statuses,
+  choices,
+  onPickPlan,
   onEdit,
   onConfirm,
   onClear,
@@ -389,6 +462,8 @@ function PlansTab({
 }: {
   list: typeof patients;
   statuses: Record<string, PlanStatus>;
+  choices: Record<string, string>;
+  onPickPlan: (p: Patient) => void;
   onEdit: (p: Patient) => void;
   onConfirm: (p: Patient) => void;
   onClear: (p: Patient) => void;
@@ -404,7 +479,9 @@ function PlansTab({
 
       {list.map((p) => {
         const status = statuses[p.id] ?? "ai-draft";
-        const plan = aiRehabPlan(p);
+        const planKey = choices[p.id] ?? "ai-standard";
+        const template = PLAN_TEMPLATES.find((t) => t.key === planKey) ?? PLAN_TEMPLATES[0];
+        const plan = aiRehabPlan(p, planKey);
         return (
           <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
             <div className="flex items-start justify-between gap-2 border-b p-3">
@@ -421,6 +498,14 @@ function PlansTab({
                 <div className="mt-1 text-[10px] text-muted-foreground">
                   {p.surgeryName} · 术日 {p.surgeryDate}
                 </div>
+                <button
+                  onClick={() => onPickPlan(p)}
+                  className="mt-1 flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary active:opacity-80"
+                >
+                  <HeartPulse className="h-2.5 w-2.5" />
+                  {template.name}
+                  <ChevronRight className="h-2.5 w-2.5" />
+                </button>
               </div>
               <PlanStatusBadge status={status} />
             </div>
@@ -1147,3 +1232,64 @@ function DischargeSheet({
 }
 
 
+
+// 方案选择弹层：默认 AI 标准方案，可手动切换其他方案
+function PlanPickerSheet({
+  patient,
+  current,
+  onClose,
+  onSelect,
+}: {
+  patient: Patient;
+  current: string;
+  onClose: () => void;
+  onSelect: (key: string) => void;
+}) {
+  return (
+    <div className="absolute inset-0 z-50 flex flex-col bg-background">
+      <div className="flex items-center justify-between border-b bg-card px-3 py-2.5">
+        <button onClick={onClose} className="text-muted-foreground">
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="text-[13px] font-semibold">选择康复方案 · {patient.name}</div>
+        <span className="w-4" />
+      </div>
+      <div className="flex-1 space-y-2 overflow-y-auto p-3">
+        <div className="rounded-2xl border bg-info/5 p-3 text-[11px] text-info">
+          <Sparkles className="mr-1 inline h-3 w-3" />
+          默认使用 AI 标准方案，可根据患者情况手动切换为其他方案；切换后需重新确认。
+        </div>
+        {PLAN_TEMPLATES.map((t) => {
+          const active = t.key === current;
+          return (
+            <button
+              key={t.key}
+              onClick={() => onSelect(t.key)}
+              className={cn(
+                "w-full rounded-2xl border p-3 text-left active:opacity-90",
+                active ? "border-primary bg-primary/5" : "bg-card",
+              )}
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[13px] font-bold">{t.name}</span>
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0.5 text-[9px]",
+                      t.key === "ai-standard" ? "bg-info/10 text-info" : "bg-muted/60 text-muted-foreground",
+                    )}
+                  >
+                    {t.tag}
+                  </span>
+                </div>
+                {active && <CheckCircle2 className="h-4 w-4 text-primary" />}
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">{t.desc}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
