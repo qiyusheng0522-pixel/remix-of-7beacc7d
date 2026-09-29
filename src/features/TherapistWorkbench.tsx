@@ -1230,3 +1230,64 @@ function DischargeSheet({
 }
 
 
+
+// 方案选择弹层：默认 AI 标准方案，可手动切换其他方案
+function PlanPickerSheet({
+  patient,
+  current,
+  onClose,
+  onSelect,
+}: {
+  patient: Patient;
+  current: string;
+  onClose: () => void;
+  onSelect: (key: string) => void;
+}) {
+  return (
+    <div className="absolute inset-0 z-50 flex flex-col bg-background">
+      <div className="flex items-center justify-between border-b bg-card px-3 py-2.5">
+        <button onClick={onClose} className="text-muted-foreground">
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="text-[13px] font-semibold">选择康复方案 · {patient.name}</div>
+        <span className="w-4" />
+      </div>
+      <div className="flex-1 space-y-2 overflow-y-auto p-3">
+        <div className="rounded-2xl border bg-info/5 p-3 text-[11px] text-info">
+          <Sparkles className="mr-1 inline h-3 w-3" />
+          默认使用 AI 标准方案，可根据患者情况手动切换为其他方案；切换后需重新确认。
+        </div>
+        {PLAN_TEMPLATES.map((t) => {
+          const active = t.key === current;
+          return (
+            <button
+              key={t.key}
+              onClick={() => onSelect(t.key)}
+              className={cn(
+                "w-full rounded-2xl border p-3 text-left active:opacity-90",
+                active ? "border-primary bg-primary/5" : "bg-card",
+              )}
+              style={{ boxShadow: "var(--shadow-card)" }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[13px] font-bold">{t.name}</span>
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0.5 text-[9px]",
+                      t.key === "ai-standard" ? "bg-info/10 text-info" : "bg-muted/60 text-muted-foreground",
+                    )}
+                  >
+                    {t.tag}
+                  </span>
+                </div>
+                {active && <CheckCircle2 className="h-4 w-4 text-primary" />}
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">{t.desc}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
