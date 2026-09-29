@@ -122,6 +122,8 @@ export function TherapistWorkbench() {
     p8: "confirmed",
     p9: "edited",
   });
+  const [planChoices, setPlanChoices] = useState<Record<string, string>>({});
+  const [planPicker, setPlanPicker] = useState<Patient | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   // 住院 + 门诊康复患者
