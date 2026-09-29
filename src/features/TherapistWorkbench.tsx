@@ -482,6 +482,14 @@ function PlansTab({
                 <div className="mt-1 text-[10px] text-muted-foreground">
                   {p.surgeryName} · 术日 {p.surgeryDate}
                 </div>
+                <button
+                  onClick={() => onPickPlan(p)}
+                  className="mt-1 flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary active:opacity-80"
+                >
+                  <HeartPulse className="h-2.5 w-2.5" />
+                  {template.name}
+                  <ChevronRight className="h-2.5 w-2.5" />
+                </button>
               </div>
               <PlanStatusBadge status={status} />
             </div>
