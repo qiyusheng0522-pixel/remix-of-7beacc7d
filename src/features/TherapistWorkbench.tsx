@@ -452,6 +452,8 @@ function StatEntry({
 function PlansTab({
   list,
   statuses,
+  choices,
+  onPickPlan,
   onEdit,
   onConfirm,
   onClear,
