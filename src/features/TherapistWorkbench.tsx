@@ -446,6 +446,8 @@ function PlansTab({
 }: {
   list: typeof patients;
   statuses: Record<string, PlanStatus>;
+  choices: Record<string, string>;
+  onPickPlan: (p: Patient) => void;
   onEdit: (p: Patient) => void;
   onConfirm: (p: Patient) => void;
   onClear: (p: Patient) => void;
