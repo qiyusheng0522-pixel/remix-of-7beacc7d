@@ -14,13 +14,17 @@ export interface PreOpRehabAssessment {
   flexionLeft: string;
   flexionRight: string;
   dorsiflexion: string;
-  ami: string;
+  amiLeft: string;
+  amiRight: string;
   amiNote: string;
-  slr: string;
+  slrLeft: string;
+  slrRight: string;
   extensionLag: string;
-  atrophy: string;
+  atrophyLeft: string;
+  atrophyRight: string;
   atrophyOther: string;
-  deformity: string;
+  deformityLeft: string;
+  deformityRight: string;
   laxity: string;
   laxitySite: string;
   patellaMobility: string;
@@ -31,8 +35,8 @@ const painItems = ["下地1步行", "NWB 活动", "持续", "夜间", "其他"];
 const blankAssessment: PreOpRehabAssessment = {
   painTriggers: [], painScores: {}, swellingSite: "", swellingGrade: "",
   extensionLeft: "", extensionRight: "", flexionLeft: "", flexionRight: "",
-  dorsiflexion: "正常", ami: "无", amiNote: "", slr: "", extensionLag: "",
-  atrophy: "无", atrophyOther: "", deformity: "正常", laxity: "无",
+  dorsiflexion: "正常", amiLeft: "无", amiRight: "无", amiNote: "", slrLeft: "1-独立完成", slrRight: "1-独立完成", extensionLag: "",
+  atrophyLeft: "无", atrophyRight: "无", atrophyOther: "", deformityLeft: "正常", deformityRight: "正常", laxity: "无",
   laxitySite: "", patellaMobility: "", other: "",
 };
 
@@ -108,20 +112,20 @@ export function PreOpRehabAssessmentSheet({ patient, initial, onClose, onSave }:
           <Choices options={["正常", "轻微受限", "明显受限"]} value={form.dorsiflexion} onChange={(v) => update("dorsiflexion", v)} />
         </Section>
         <Section number={7} title="AMI（左右都要填，默认无）">
-          <Choices options={["无", "1a 级", "1b 级", "2a 级", "2b 级", "3 级"]} value={form.ami} onChange={(v) => update("ami", v)} />
+          <div className="space-y-2">{(["Left", "Right"] as const).map((side) => <div key={side}><div className="mb-1 text-[11px] text-muted-foreground">{side === "Left" ? "左侧" : "右侧"}</div><Choices options={["无", "1a 级", "1b 级", "2a 级", "2b 级", "3 级"]} value={form[`ami${side}`]} onChange={(v) => update(`ami${side}`, v)} /></div>)}</div>
           <div className="mt-2"><TextField label="备注（如处理后结果）" value={form.amiNote} onChange={(v) => update("amiNote", v)} /></div>
         </Section>
         <Section number={8} title="SLR（左右都要填，默认独立完成）">
-          <Choices options={["1-独立完成", "2-少许辅助", "3-更多辅助", "4-无法完成"]} value={form.slr} onChange={(v) => update("slr", v)} />
+          <div className="space-y-2">{(["Left", "Right"] as const).map((side) => <div key={side}><div className="mb-1 text-[11px] text-muted-foreground">{side === "Left" ? "左侧" : "右侧"}</div><Choices options={["1-独立完成", "2-少许辅助", "3-更多辅助", "4-无法完成"]} value={form[`slr${side}`]} onChange={(v) => update(`slr${side}`, v)} /></div>)}</div>
           <div className="mt-2"><TextField label="伸膝迟滞角度（°）" value={form.extensionLag} onChange={(v) => update("extensionLag", v)} /></div>
         </Section>
         <Section number={9} title="肌肉萎缩（左右都要填，默认无）">
-          <Choices options={["无", "轻", "中", "重", "其他"]} value={form.atrophy} onChange={(v) => update("atrophy", v)} />
-          {form.atrophy === "其他" && <div className="mt-2"><TextField label="其他情况" value={form.atrophyOther} onChange={(v) => update("atrophyOther", v)} /></div>}
+          <div className="space-y-2">{(["Left", "Right"] as const).map((side) => <div key={side}><div className="mb-1 text-[11px] text-muted-foreground">{side === "Left" ? "左侧" : "右侧"}</div><Choices options={["无", "轻", "中", "重", "其他"]} value={form[`atrophy${side}`]} onChange={(v) => update(`atrophy${side}`, v)} /></div>)}</div>
+          {(form.atrophyLeft === "其他" || form.atrophyRight === "其他") && <div className="mt-2"><TextField label="其他情况" value={form.atrophyOther} onChange={(v) => update("atrophyOther", v)} /></div>}
         </Section>
         <Section number={10} title="其他">
           <div className="space-y-3">
-            <div><div className="mb-1 text-[11px] font-medium">（1）畸形（左右都要填，默认正常）</div><Choices options={["正常", "膝内翻", "膝外翻"]} value={form.deformity} onChange={(v) => update("deformity", v)} /></div>
+            <div><div className="mb-1 text-[11px] font-medium">（1）畸形（左右都要填，默认正常）</div><div className="space-y-2">{(["Left", "Right"] as const).map((side) => <div key={side}><div className="mb-1 text-[11px] text-muted-foreground">{side === "Left" ? "左侧" : "右侧"}</div><Choices options={["正常", "膝内翻", "膝外翻"]} value={form[`deformity${side}`]} onChange={(v) => update(`deformity${side}`, v)} /></div>)}</div></div>
             <div><div className="mb-1 text-[11px] font-medium">（2）多关节囊松弛（默认无）</div><Choices options={["无", "有"]} value={form.laxity} onChange={(v) => update("laxity", v)} />{form.laxity === "有" && <div className="mt-2"><TextField label="具体分值" value={form.laxitySite} onChange={(v) => update("laxitySite", v)} /></div>}</div>
             <TextField label="（3）髌骨活动水平" value={form.patellaMobility} onChange={(v) => update("patellaMobility", v)} />
             <TextField label="（4）其他" value={form.other} onChange={(v) => update("other", v)} />
