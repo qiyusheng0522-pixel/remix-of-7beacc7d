@@ -29,7 +29,7 @@ import { PatientChatListSheet, PatientChatEntryCard } from "@/components/Patient
 import { PatientArchiveSheet } from "@/components/PatientArchiveSheet";
 import { PatientListSheet } from "@/components/PatientListSheet";
 import { RehabRecordSheet } from "@/components/RehabRecordSheet";
-import { PreOpRehabAssessmentSheet } from "@/components/PreOpRehabAssessmentSheet";
+import { PreOpRehabAssessmentSheet, detectJoint, jointLabels, jointDemoAssessments } from "@/components/PreOpRehabAssessmentSheet";
 import type { PreOpRehabAssessment } from "@/components/PreOpRehabAssessmentSheet";
 import { ActionSheet, ToastBanner } from "@/components/ActionSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
@@ -120,7 +120,15 @@ export function TherapistWorkbench() {
   const [planEditor, setPlanEditor] = useState<Patient | null>(null);
   const [recordFor, setRecordFor] = useState<Patient | null>(null);
   const [preOpFor, setPreOpFor] = useState<Patient | null>(null);
-  const [preOpAssessments, setPreOpAssessments] = useState<Record<string, PreOpRehabAssessment>>({});
+  // 四个关节类型各预置一条示例评估数据（膝 p5 / 肩 p3 / 髋 p12 / 肘 p13）
+  const [preOpAssessments, setPreOpAssessments] = useState<Record<string, PreOpRehabAssessment>>(() => {
+    const seed: Record<string, PreOpRehabAssessment> = {};
+    for (const id of ["p5", "p3", "p12", "p13"]) {
+      const p = patients.find((item) => item.id === id);
+      if (p) seed[id] = jointDemoAssessments[detectJoint(p)];
+    }
+    return seed;
+  });
   const [planStatuses, setPlanStatuses] = useState<Record<string, PlanStatus>>({
     p7: "ai-draft",
     p8: "confirmed",
@@ -697,8 +705,9 @@ function RecordsTab({
                 </div>
               </button>
 
-              <div className="border-b px-3 py-2 text-[11px] text-muted-foreground">
+              <div className="flex items-center gap-2 border-b px-3 py-2 text-[11px] text-muted-foreground">
                 {saved ? <span className="inline-flex items-center gap-1 text-success"><CheckCircle2 className="h-3 w-3" />术前康复评估已填写</span> : "术前康复评估待填写"}
+                <span className="ml-auto rounded bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary">{jointLabels[detectJoint(p)]}评估表</span>
               </div>
 
               <div className="grid grid-cols-2 gap-0 border-t">
