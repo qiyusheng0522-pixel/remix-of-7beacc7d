@@ -122,7 +122,7 @@ export function TherapistWorkbench() {
   const [preOpFor, setPreOpFor] = useState<Patient | null>(null);
   // 四个关节类型各预置一条示例评估数据（膝 p5 / 肩 p6、p3 / 髋 p12 / 肘 p13）
   const [preOpAssessments, setPreOpAssessments] = useState<Record<string, PreOpRehabAssessment>>(() => {
-    const seed: Record<string, PreOpAssessmentSeed> = {};
+    const seed: Record<string, PreOpRehabAssessment> = {};
     for (const id of ["p5", "p6", "p3", "p12", "p13"]) {
       const p = patients.find((item) => item.id === id);
       if (p) seed[id] = jointDemoAssessments[detectJoint(p)];
