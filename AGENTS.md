@@ -1,0 +1,1 @@
+- Keep therapist preoperative rehabilitation assessment as a dedicated frontend form with parent-held demo state, because this prototype has no connected persistence service.
