@@ -383,7 +383,7 @@ function HistoryTab() {
       day: "今日",
       records: [
         { bed: "01", name: "刘德海", surgery: "右 THA", abnormal: 2 },
-        { bed: "02", name: "吴翠花", surgery: "左 TKA 翻修", abnormal: 0 },
+        { bed: "02", name: "吴翠花", surgery: "右肩袖修补", abnormal: 0 },
       ],
     },
     {
