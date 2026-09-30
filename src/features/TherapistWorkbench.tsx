@@ -29,6 +29,8 @@ import { PatientChatListSheet, PatientChatEntryCard } from "@/components/Patient
 import { PatientArchiveSheet } from "@/components/PatientArchiveSheet";
 import { PatientListSheet } from "@/components/PatientListSheet";
 import { RehabRecordSheet } from "@/components/RehabRecordSheet";
+import { PreOpRehabAssessmentSheet } from "@/components/PreOpRehabAssessmentSheet";
+import type { PreOpRehabAssessment } from "@/components/PreOpRehabAssessmentSheet";
 import { ActionSheet, ToastBanner } from "@/components/ActionSheet";
 import { patients, todayTasks } from "@/lib/mock-data";
 import type { Patient } from "@/lib/types";
@@ -117,6 +119,8 @@ export function TherapistWorkbench() {
   const [actionPatient, setActionPatient] = useState<Patient | null>(null);
   const [planEditor, setPlanEditor] = useState<Patient | null>(null);
   const [recordFor, setRecordFor] = useState<Patient | null>(null);
+  const [preOpFor, setPreOpFor] = useState<Patient | null>(null);
+  const [preOpAssessments, setPreOpAssessments] = useState<Record<string, PreOpRehabAssessment>>({});
   const [planStatuses, setPlanStatuses] = useState<Record<string, PlanStatus>>({
     p7: "ai-draft",
     p8: "confirmed",
@@ -194,6 +198,8 @@ export function TherapistWorkbench() {
         <RecordsTab
           inpatientList={inpatientList}
           tomorrowSurgery={tomorrowSurgery}
+          assessments={preOpAssessments}
+          onPreOp={(p) => setPreOpFor(p)}
           onSelect={(p) => setActionPatient(p)}
           onAddRecord={(p) => setRecordFor(p)}
           onDischarge={(p) => setOverlay({ kind: "discharge", patient: p })}
@@ -234,6 +240,19 @@ export function TherapistWorkbench() {
           onSave={() => {
             showToast(`已保存院内康复记录：${recordFor.name}`);
             setRecordFor(null);
+          }}
+        />
+      )}
+      {preOpFor && (
+        <PreOpRehabAssessmentSheet
+          key={preOpFor.id}
+          patient={preOpFor}
+          initial={preOpAssessments[preOpFor.id]}
+          onClose={() => setPreOpFor(null)}
+          onSave={(assessment) => {
+            setPreOpAssessments((current) => ({ ...current, [preOpFor.id]: assessment }));
+            showToast(`已保存 ${preOpFor.name} 的术前康复评估`);
+            setPreOpFor(null);
           }}
         />
       )}
@@ -596,6 +615,8 @@ function PlansTab({
 function RecordsTab({
   inpatientList,
   tomorrowSurgery,
+  assessments,
+  onPreOp,
   onSelect,
   onAddRecord,
   onDischarge,
@@ -603,6 +624,8 @@ function RecordsTab({
 }: {
   inpatientList: Patient[];
   tomorrowSurgery: Patient[];
+  assessments: Record<string, PreOpRehabAssessment>;
+  onPreOp: (p: Patient) => void;
   onSelect: (p: Patient) => void;
   onAddRecord: (p: Patient) => void;
   onDischarge: (p: Patient) => void;
@@ -617,7 +640,7 @@ function RecordsTab({
     <div className="space-y-3 p-3">
       <div className="rounded-2xl border bg-info/5 p-2.5 text-[11px] text-info">
         <ClipboardCheck className="mr-1 inline h-3 w-3" />
-        住院康复分为「明日手术」（术前 AI 评估）与「术后康复」（每日评估）。
+        住院康复分为「明日手术」（术前康复评估）与「术后康复」（治疗记录）。
       </div>
 
       <div className="grid grid-cols-2 overflow-hidden rounded-full border bg-muted/30 p-0.5 text-[12px]">
@@ -647,11 +670,10 @@ function RecordsTab({
         </div>
       )}
 
-      {/* 明日手术：展示患者基本信息 + AI 术前康复评估 */}
+      {/* 明日手术：只填写术前康复评估表 */}
       {sub === "tomorrow" &&
         visible.map((p) => {
-          const ai = aiPreOpRehabAssessment(p);
-          const s = p.preOpSymptoms;
+          const saved = assessments[p.id];
           return (
             <div key={p.id} className="overflow-hidden rounded-2xl border bg-card" style={{ boxShadow: "var(--shadow-card)" }}>
               <button onClick={() => onArchive(p)} className="block w-full border-b p-3 text-left active:bg-muted/30">
@@ -675,42 +697,8 @@ function RecordsTab({
                 </div>
               </button>
 
-              {/* 术前症状指标 */}
-              {s && (
-                <div className="grid grid-cols-3 gap-2 border-b p-3">
-                  <Metric label="疼痛 VAS" value={`${s.painVAS ?? "—"}/10`} trend={(s.painVAS ?? 0) >= 5 ? "down" : "up"} />
-                  <Metric label="肿胀" value={s.swelling ?? "—"} trend={s.swelling === "中" || s.swelling === "重" ? "down" : "up"} />
-                  <Metric label="ROM" value={s.rom ?? "—"} trend="up" />
-                  {s.strength && <Metric label="肌力" value={s.strength} trend="up" />}
-                  {s.dailyFunction && (
-                    <div className="col-span-3 rounded-lg border bg-muted/20 p-2 text-[10px] text-muted-foreground">
-                      <span className="font-medium text-foreground">日常功能：</span>
-                      {s.dailyFunction}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* AI 术前评估结论 */}
-              <div className={cn(
-                "border-b p-3",
-                ai.level === "良好" ? "bg-success/5" : ai.level === "尚可" ? "bg-warning/5" : "bg-destructive/5",
-              )}>
-                <div className={cn("flex items-center gap-1 text-[11px] font-bold", ai.tone)}>
-                  <Sparkles className="h-3 w-3" />
-                  {ai.summary}
-                </div>
-                <ul className="mt-1 space-y-0.5 pl-3 text-[10px] text-muted-foreground">
-                  {ai.reasons.map((r, i) => (
-                    <li key={i} className="list-disc">{r}</li>
-                  ))}
-                </ul>
-                <div className="mt-1.5 rounded-lg bg-card p-2 text-[10px]">
-                  <div className="mb-0.5 text-[9px] font-bold text-info">康复建议</div>
-                  {ai.suggestions.map((s, i) => (
-                    <div key={i}>· {s}</div>
-                  ))}
-                </div>
+              <div className="border-b px-3 py-2 text-[11px] text-muted-foreground">
+                {saved ? <span className="inline-flex items-center gap-1 text-success"><CheckCircle2 className="h-3 w-3" />术前康复评估已填写</span> : "术前康复评估待填写"}
               </div>
 
               <div className="grid grid-cols-2 gap-0 border-t">
@@ -721,10 +709,10 @@ function RecordsTab({
                   <FileSearch className="h-3 w-3" />患者档案
                 </button>
                 <button
-                  onClick={() => onAddRecord(p)}
+                  onClick={() => onPreOp(p)}
                   className="flex items-center justify-center gap-1 border-l py-2.5 text-[11px] font-medium text-primary active:bg-muted/40"
                 >
-                  <PlusCircle className="h-3 w-3" />术前评估
+                  <PlusCircle className="h-3 w-3" />{saved ? "查看 / 修改评估" : "填写术前评估"}
                 </button>
               </div>
             </div>
@@ -1124,59 +1112,6 @@ function PlanStatusBadge({ status }: { status: PlanStatus }) {
       <Trash2 className="h-2.5 w-2.5" />已清空
     </span>
   );
-}
-
-/* ---------- 明日手术患者 - AI 术前康复评估（基于疼痛、肿胀、ROM） ---------- */
-export function aiPreOpRehabAssessment(p: Patient): { level: "良好" | "尚可" | "欠佳"; tone: string; summary: string; reasons: string[]; suggestions: string[] } {
-  const s = p.preOpSymptoms;
-  if (!s) {
-    return {
-      level: "尚可",
-      tone: "text-info",
-      summary: "AI 术前评估：暂无症状数据",
-      reasons: ["未录入疼痛 / 肿胀 / 关节活动度等指标"],
-      suggestions: ["建议术前完成基础康复评估，便于制定术后方案"],
-    };
-  }
-  const issues: string[] = [];
-  if ((s.painVAS ?? 0) >= 5) issues.push(`疼痛 VAS ${s.painVAS}/10 偏高`);
-  if (s.swelling === "中" || s.swelling === "重") issues.push(`关节肿胀 ${s.swelling}度`);
-  if (s.rom && /0-([0-9]+)/.test(s.rom)) {
-    const m = s.rom.match(/0-([0-9]+)/);
-    if (m && parseInt(m[1]) < 100) issues.push(`关节活动度 ${s.rom} 受限`);
-  }
-  if (issues.length === 0) {
-    return {
-      level: "良好",
-      tone: "text-success",
-      summary: "AI 术前评估：康复条件良好",
-      reasons: ["疼痛轻、关节活动度满意、肌力充分"],
-      suggestions: ["可按计划手术，术后康复预后乐观", "术前继续维持现有训练强度"],
-    };
-  }
-  if (issues.length === 1) {
-    return {
-      level: "尚可",
-      tone: "text-warning-foreground",
-      summary: "AI 术前评估：康复条件尚可，需重点关注",
-      reasons: issues,
-      suggestions: [
-        "建议术前 1-2 日加强消肿与镇痛干预",
-        "术后注意尽早恢复关节活动度",
-      ],
-    };
-  }
-  return {
-    level: "欠佳",
-    tone: "text-destructive",
-    summary: `AI 术前评估：康复条件欠佳（${issues.length} 项异常）`,
-    reasons: issues,
-    suggestions: [
-      "建议与主刀沟通是否需延迟手术",
-      "术前先行消肿、止痛、ROM 强化训练",
-      "术后康复方案需更循序渐进",
-    ],
-  };
 }
 
 /* ---------- 出院备注 ---------- */
