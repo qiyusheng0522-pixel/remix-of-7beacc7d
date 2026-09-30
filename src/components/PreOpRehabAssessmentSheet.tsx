@@ -31,7 +31,7 @@ export interface PreOpRehabAssessment {
   other: string;
 }
 
-const painItems = ["下地1步行", "NWB 活动", "持续", "夜间", "其他"];
+const painItems = ["下地步行", "NWB 活动", "持续", "夜间", "其他"];
 const blankAssessment: PreOpRehabAssessment = {
   painTriggers: [], painScores: {}, swellingSite: "", swellingGrade: "",
   extensionLeft: "", extensionRight: "", flexionLeft: "", flexionRight: "",

@@ -8,6 +8,10 @@ export const Route = createFileRoute("/")({
     meta: [
       { title: "骨安 BoneCare 小程序 — 角色入口" },
       { name: "description", content: "骨安骨科诊疗小程序 · 5 个角色端 · 门诊与住院全周期管理" },
+      { property: "og:title", content: "骨安 BoneCare 小程序 — 角色入口" },
+      { property: "og:description", content: "体验骨安骨科诊疗小程序的护士、医生、手术团队、治疗师与患者端。" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: HomePage,
