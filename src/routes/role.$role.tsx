@@ -28,6 +28,10 @@ export const Route = createFileRoute("/role/$role")({
       meta: [
         { title },
         { name: "description", content: meta?.description ?? "骨安角色化诊疗小程序" },
+        { property: "og:title", content: title },
+        { property: "og:description", content: meta?.description ?? "骨安角色化诊疗小程序" },
+        { property: "og:type", content: "website" },
+        { name: "twitter:card", content: "summary" },
       ],
     };
   },

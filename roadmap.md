@@ -1,0 +1,2 @@
+- [x] Replace therapist tomorrow-surgery AI assessment with the uploaded preoperative rehabilitation form.
+- [x] Verify form saving and reopening in the preview.
