@@ -205,6 +205,12 @@ export const patients: Patient[] = [
     status: "admitted",
     department: "inpatient",
     isNew: true,
+    preOpAbnormal: true,
+    preOpFindings: [
+      { label: "X 线", value: "右髋 Crowe II 型 DDH", abnormal: true },
+      { label: "下肢不等长", value: "右下肢短缩 1.5cm", abnormal: true },
+      { label: "Trendelenburg 征", value: "阳性", abnormal: true },
+    ],
   },
   {
     id: "p13",
@@ -225,6 +231,11 @@ export const patients: Patient[] = [
     status: "admitted",
     department: "inpatient",
     isNew: true,
+    preOpAbnormal: false,
+    preOpFindings: [
+      { label: "X 线", value: "右桡骨头 Mason II 型骨折", abnormal: true },
+      { label: "肘关节肿胀", value: "轻度", abnormal: false },
+    ],
   },
   {
     id: "p8",
