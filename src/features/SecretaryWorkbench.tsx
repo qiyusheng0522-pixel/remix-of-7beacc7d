@@ -397,15 +397,18 @@ function OutpatientTab({
 
 function InpatientTab({ list, onSelect, onBatchEducation }: { list: typeof patients; onSelect: (p: Patient) => void; onBatchEducation: () => void }) {
   const [sub, setSub] = useState<"all" | "discharge">("all");
-  // 今日出院 = 状态为 rehab 或已下出院评估的患者（mock）
-  const dischargeToday = list.filter((p) => p.status === "rehab");
-  const visible = sub === "all" ? list : dischargeToday;
+  const [dischargedIds, setDischargedIds] = useState<string[]>([]);
+  const [confirmFor, setConfirmFor] = useState<Patient | null>(null);
+  // 今日出院 = 状态为 rehab 或已下出院评估的患者（mock），已办出院者释放床位后移出
+  const activeList = list.filter((p) => !dischargedIds.includes(p.id));
+  const dischargeToday = activeList.filter((p) => p.status === "rehab");
+  const visible = sub === "all" ? activeList : dischargeToday;
   return (
     <div className="space-y-3 p-3">
       <div className="grid grid-cols-4 gap-2">
         {[
           { l: "总床位", v: 16, c: "text-foreground" },
-          { l: "在院", v: list.length, c: "text-primary" },
+          { l: "在院", v: activeList.length, c: "text-primary" },
           { l: "今日手术", v: 3, c: "text-warning-foreground" },
           { l: "今日出院", v: dischargeToday.length, c: "text-success" },
         ].map((x) => (
@@ -424,7 +427,7 @@ function InpatientTab({ list, onSelect, onBatchEducation }: { list: typeof patie
             sub === "all" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
           )}
         >
-          在院全部 · {list.length}
+          在院全部 · {activeList.length}
         </button>
         <button
           onClick={() => setSub("discharge")}
@@ -451,35 +454,86 @@ function InpatientTab({ list, onSelect, onBatchEducation }: { list: typeof patie
           </div>
         )}
         {visible.map((p) => (
-          <button key={p.id} onClick={() => onSelect(p)} className="w-full rounded-2xl border bg-card p-3 text-left active:bg-muted/30">
-            <div className="flex items-start gap-2.5">
-              <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <span className="text-[8px]">床号</span>
-                <span className="font-mono text-sm font-bold leading-none">{p.bedNo}</span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-1">
-                  <span className="text-sm font-bold">{p.name}</span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {p.gender}·{p.age}
-                  </span>
-                  {p.side && (
-                    <span className="rounded bg-warning/20 px-1 py-0.5 text-[9px] font-bold text-warning-foreground">
-                      患侧 {p.side}
-                    </span>
-                  )}
-                  {p.isNew && <Tag color="info">新</Tag>}
-                  {p.infectious && <Tag color="destructive">传</Tag>}
-                  {p.communicationDifficult && <Tag color="warning">沟</Tag>}
+          <div key={p.id} className="w-full rounded-2xl border bg-card p-3">
+            <button onClick={() => onSelect(p)} className="w-full text-left active:opacity-70">
+              <div className="flex items-start gap-2.5">
+                <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <span className="text-[8px]">床号</span>
+                  <span className="font-mono text-sm font-bold leading-none">{p.bedNo}</span>
                 </div>
-                <div className="mt-0.5 text-[11px] text-muted-foreground">{p.diagnosis}</div>
-                <div className="text-[10px] text-muted-foreground">{p.surgeryName}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1">
+                    <span className="text-sm font-bold">{p.name}</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {p.gender}·{p.age}
+                    </span>
+                    {p.side && (
+                      <span className="rounded bg-warning/20 px-1 py-0.5 text-[9px] font-bold text-warning-foreground">
+                        患侧 {p.side}
+                      </span>
+                    )}
+                    {p.isNew && <Tag color="info">新</Tag>}
+                    {p.infectious && <Tag color="destructive">传</Tag>}
+                    {p.communicationDifficult && <Tag color="warning">沟</Tag>}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-muted-foreground">{p.diagnosis}</div>
+                  <div className="text-[10px] text-muted-foreground">{p.surgeryName}</div>
+                </div>
+                <StatusPill status={p.status} />
               </div>
-              <StatusPill status={p.status} />
-            </div>
-          </button>
+            </button>
+            {sub === "discharge" && (
+              <div className="mt-2 flex items-center justify-between border-t pt-2">
+                <span className="text-[10px] text-muted-foreground">住院号 {p.outpatientId}</span>
+                <button
+                  onClick={() => setConfirmFor(p)}
+                  className="flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-medium text-primary-foreground active:opacity-80"
+                  style={{ background: "var(--gradient-primary)" }}
+                >
+                  <Home className="h-3 w-3" />办理出院
+                </button>
+              </div>
+            )}
+          </div>
         ))}
       </div>
+
+      {confirmFor && (
+        <div className="absolute inset-0 z-50 flex items-end bg-black/40" onClick={() => setConfirmFor(null)}>
+          <div className="w-full rounded-t-3xl bg-background p-4 pb-8" onClick={(e) => e.stopPropagation()}>
+            <div className="text-center text-sm font-bold">确认办理出院</div>
+            <div className="mt-3 rounded-2xl border bg-card p-3 text-[12px]">
+              <div className="flex items-center gap-2">
+                <span className="font-bold">{confirmFor.name}</span>
+                <span className="text-[10px] text-muted-foreground">{confirmFor.gender}·{confirmFor.age}</span>
+                <span className="rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">{confirmFor.bedNo}床</span>
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">{confirmFor.diagnosis}</div>
+            </div>
+            <div className="mt-2 rounded-xl bg-warning/10 p-2.5 text-[11px] text-warning-foreground">
+              出院后将释放 {confirmFor.bedNo} 床床位及住院号 {confirmFor.outpatientId}，该患者将转入随访管理。
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setConfirmFor(null)}
+                className="rounded-full border py-2.5 text-[13px] font-medium text-muted-foreground active:bg-muted/40"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  setDischargedIds((s) => [...s, confirmFor.id]);
+                  setConfirmFor(null);
+                }}
+                className="rounded-full py-2.5 text-[13px] font-medium text-primary-foreground active:opacity-80"
+                style={{ background: "var(--gradient-primary)" }}
+              >
+                确认出院
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
