@@ -427,7 +427,7 @@ function InpatientTab({ list, onSelect, onBatchEducation }: { list: typeof patie
             sub === "all" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
           )}
         >
-          在院全部 · {list.length}
+          在院全部 · {activeList.length}
         </button>
         <button
           onClick={() => setSub("discharge")}
