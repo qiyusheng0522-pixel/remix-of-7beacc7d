@@ -397,9 +397,12 @@ function OutpatientTab({
 
 function InpatientTab({ list, onSelect, onBatchEducation }: { list: typeof patients; onSelect: (p: Patient) => void; onBatchEducation: () => void }) {
   const [sub, setSub] = useState<"all" | "discharge">("all");
-  // 今日出院 = 状态为 rehab 或已下出院评估的患者（mock）
-  const dischargeToday = list.filter((p) => p.status === "rehab");
-  const visible = sub === "all" ? list : dischargeToday;
+  const [dischargedIds, setDischargedIds] = useState<string[]>([]);
+  const [confirmFor, setConfirmFor] = useState<Patient | null>(null);
+  // 今日出院 = 状态为 rehab 或已下出院评估的患者（mock），已办出院者释放床位后移出
+  const activeList = list.filter((p) => !dischargedIds.includes(p.id));
+  const dischargeToday = activeList.filter((p) => p.status === "rehab");
+  const visible = sub === "all" ? activeList : dischargeToday;
   return (
     <div className="space-y-3 p-3">
       <div className="grid grid-cols-4 gap-2">
