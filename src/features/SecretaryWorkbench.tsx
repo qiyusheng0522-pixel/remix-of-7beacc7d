@@ -408,7 +408,7 @@ function InpatientTab({ list, onSelect, onBatchEducation }: { list: typeof patie
       <div className="grid grid-cols-4 gap-2">
         {[
           { l: "总床位", v: 16, c: "text-foreground" },
-          { l: "在院", v: list.length, c: "text-primary" },
+          { l: "在院", v: activeList.length, c: "text-primary" },
           { l: "今日手术", v: 3, c: "text-warning-foreground" },
           { l: "今日出院", v: dischargeToday.length, c: "text-success" },
         ].map((x) => (
